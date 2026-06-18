@@ -11,11 +11,11 @@
  *   finterm setup --check    read-only status
  *   finterm setup --remove   uninstall
  *
- * Why copy (not symlink): per tbd guideline `cli-agent-skill-patterns` §6.6, a copied
- * mirror behaves predictably across Windows, sandboxes, and remote worktrees, where
- * symlinks do not. Symlinking is a single-machine optimization (`npx skills`, `qmd`);
- * an end-user CLI install copies. `.agents/skills/finterm/SKILL.md` is the source of
- * truth and both copies carry identical content (rewritten every run, so no drift).
+ * Why copy (not symlink): a copied mirror behaves predictably across Windows, sandboxes,
+ * and remote worktrees, where symlinks do not. Symlinking is a single-machine
+ * optimization; an end-user CLI install copies. `.agents/skills/finterm/SKILL.md` is the
+ * source of truth and both copies carry identical content (rewritten every run, so no
+ * drift).
  */
 
 import { Command } from 'commander';
@@ -219,10 +219,21 @@ class SetupHandler extends BaseCommand {
         if (!isExpectedFsError(error)) throw error;
       }
       const existing = settings.hooks;
-      settings.hooks = {
-        ...(existing && typeof existing === 'object' ? existing : {}),
-        ...CLAUDE_GLOBAL_HOOKS,
-      };
+      // Filter-merge: append finterm's entries to the user's existing array for each
+      // event, preserving their own hooks. Dedupe by the same identity removeClaudeHooks
+      // uses (a hook-group whose commands include `finterm prime`), so a re-run is a no-op.
+      const hooks: Record<string, { matcher?: string; hooks?: { command?: string }[] }[]> =
+        existing && typeof existing === 'object'
+          ? (existing as Record<string, { matcher?: string; hooks?: { command?: string }[] }[]>)
+          : {};
+      for (const [key, entries] of Object.entries(CLAUDE_GLOBAL_HOOKS)) {
+        const current = Array.isArray(hooks[key]) ? hooks[key] : [];
+        const isFinterm = (h: { hooks?: { command?: string }[] }) =>
+          h.hooks?.some((x) => x.command?.includes('finterm prime'));
+        const toAdd = entries.filter(() => !current.some(isFinterm));
+        hooks[key] = [...current, ...toAdd];
+      }
+      settings.hooks = hooks;
       await writeFile(path, JSON.stringify(settings, null, 2) + '\n');
     } catch (error) {
       throw new CLIError(`Failed to install Claude hooks: ${(error as Error).message}`);

@@ -51,6 +51,12 @@ export async function showInPager(content: string): Promise<void> {
       resolve();
     });
 
+    pager.stdin.on('error', () => {
+      // Pager quit before reading all input (e.g. user pressed `q`); the stdin
+      // write can emit EPIPE. Treat it as a clean exit rather than throwing.
+      resolve();
+    });
+
     pager.stdin.write(content);
     pager.stdin.end();
   });

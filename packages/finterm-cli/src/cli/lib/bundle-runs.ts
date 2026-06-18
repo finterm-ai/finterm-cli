@@ -454,7 +454,7 @@ export async function listRunLedger(options: { limit?: number } = {}): Promise<{
 /**
  * Insert or update one run in the local ledger using atomic file writes.
  *
- * Known limitation (tracked separately): the read-modify-write is not protected by a
+ * Known limitation: the read-modify-write is not protected by a
  * cross-process lock, so two concurrent finterm processes can lose one ledger update.
  * The atomic write keeps the file itself uncorrupted.
  */

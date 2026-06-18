@@ -16,7 +16,14 @@ export async function bootstrapProxy(): Promise<void> {
     // Lazy: undici is only loaded when a proxy is actually configured, keeping it
     // off the startup path for the common no-proxy case.
     const { ProxyAgent, setGlobalDispatcher } = await import('undici');
-    const agent = new ProxyAgent(proxyUrl);
+    let agent: InstanceType<typeof ProxyAgent>;
+    try {
+      // ProxyAgent throws synchronously on a malformed proxy URL.
+      agent = new ProxyAgent(proxyUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid proxy configuration (${proxyUrl}): ${message}`);
+    }
     setGlobalDispatcher(agent);
   }
 }

@@ -89,11 +89,49 @@ export function getEndpointTtlMs(path: string): number | null {
 /**
  * Create a sorted, deterministic string from request parameters.
  * Filters out null/undefined values, sorts alphabetically, joins with &.
+ *
+ * Each value is rendered with {@link stableStringify} so that nested objects
+ * and arrays produce distinct, deterministic keys regardless of input key
+ * order. Simple scalar values keep their bare textual form (e.g. `10-K`).
  */
 function sortedParamsString(params: Record<string, unknown>): string {
   return Object.entries(params)
     .filter(([_, v]) => v != null)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(',') : v}`)
+    .map(([k, v]) => `${k}=${stableStringify(v)}`)
     .join('&');
+}
+
+/**
+ * Serialize a value into a stable, deterministic string.
+ *
+ * Object keys are sorted recursively so that two inputs with the same
+ * contents but different key insertion order serialize identically. Nested
+ * objects and arrays are rendered as distinct structured forms, avoiding the
+ * `[object Object]` collapse that would otherwise collide different inputs on
+ * a single cache key. Scalars are rendered in their bare textual form (so
+ * `'10-K'` becomes `10-K`); `null` and `undefined` both render as `null`.
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${stableStringify(v)}`);
+    return `{${entries.join(',')}}`;
+  }
+
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  // Unexpected types (symbol/function) are not valid cache params; serialize
+  // deterministically without relying on default object stringification.
+  return JSON.stringify(value) ?? typeof value;
 }

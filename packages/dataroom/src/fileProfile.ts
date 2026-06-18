@@ -6,9 +6,9 @@
  */
 
 import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
-import { open as openFile, readFile, stat } from 'node:fs/promises';
+import { open as openFile, readFile, realpath, stat } from 'node:fs/promises';
 import type { Dirent, Stats } from 'node:fs';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import {
@@ -293,6 +293,7 @@ export async function readFileProfileArtifact(
     throw new NotFoundError(parsed.ref, 'file');
   }
 
+  await assertFileWithinRoom(room, file.absolutePath, parsed.ref);
   const boundedRead = await readBoundedFile(file.absolutePath, maxBytes, parsed.ref);
   const includeText = options.includeText ?? true;
   const text =
@@ -482,6 +483,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function validateMaxBytes(maxBytes: number): void {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
     throw new ValidationError('maxBytes must be a non-negative safe integer');
+  }
+}
+
+// Guard against symlink escapes: a file inside the room may be a symlink
+// pointing outside the files directory. Resolve the real paths of both the
+// files root and the target and require the target to stay inside the root.
+// The root is resolved too so rooms living under a symlinked parent still work.
+async function assertFileWithinRoom(
+  room: FileProfileRoom,
+  fullPath: string,
+  artifactRef: ArtifactRef
+): Promise<void> {
+  let rootRealPath: string;
+  let fileRealPath: string;
+  try {
+    rootRealPath = await realpath(room.filesDir);
+    fileRealPath = await realpath(fullPath);
+  } catch {
+    throw new NotFoundError(artifactRef, 'file');
+  }
+  if (fileRealPath !== rootRealPath && !fileRealPath.startsWith(rootRealPath + sep)) {
+    throw new NotFoundError(artifactRef, 'file');
   }
 }
 

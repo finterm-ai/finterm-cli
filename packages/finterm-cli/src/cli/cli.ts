@@ -1,7 +1,5 @@
 /**
  * CLI program setup using Commander.js
- *
- * See: research-modern-typescript-cli-patterns.md
  */
 
 import { Command, CommanderError, Option } from 'commander';
@@ -227,7 +225,8 @@ export async function runCli(): Promise<void> {
       // Restyle Commander's buffered stderr: first line is `error: <message>`,
       // any following lines (the showHelpAfterError hint) pass through.
       const lines = commanderErrBuffer.trimEnd().split('\n');
-      const message = (lines[0] ?? error.message).replace(/^error: /, '');
+      const bufferedFirst = (lines[0] ?? '').replace(/^error: /, '');
+      const message = bufferedFirst.trim() === '' ? error.message : bufferedFirst;
       outputError(message);
       if (!isJsonMode()) {
         for (const line of lines.slice(1)) {

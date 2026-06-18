@@ -1,11 +1,11 @@
 /**
- * Shared database-free `dataroom` command tree for DR/0.3 profile:file rooms.
+ * Database-free DR/0.3 profile:file Dataroom command tree shared by the finterm CLI.
  *
- * This package keeps the CLI surface outside the `dataroom` core package while
- * letting `finterm` and `fintool` mount the exact same implementation.
+ * This package keeps the CLI surface separate from the `dataroom` core package so the
+ * read and search commands can be reused without pulling in the core implementation.
  */
 
-import { Command } from 'commander';
+import { Command, InvalidArgumentError } from 'commander';
 import {
   DEFAULTS,
   listFileProfileFiles,
@@ -249,7 +249,7 @@ function parsePositiveInteger(
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error(`${optionName} must be a positive integer`);
+    throw new InvalidArgumentError(`${optionName} must be a positive integer`);
   }
   return parsed;
 }
@@ -264,7 +264,7 @@ function parseNonNegativeInteger(
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    throw new Error(`${optionName} must be a non-negative integer`);
+    throw new InvalidArgumentError(`${optionName} must be a non-negative integer`);
   }
   return parsed;
 }
@@ -280,7 +280,7 @@ function collectFacet(value: string, previous: FacetFilter[]): FacetFilter[] {
 function parseFacet(value: string): FacetFilter {
   const equalsIndex = value.indexOf('=');
   if (equalsIndex <= 0) {
-    throw new Error('--facet must use key=value');
+    throw new InvalidArgumentError('--facet must use key=value');
   }
   return {
     key: value.slice(0, equalsIndex) as FacetFilter['key'],

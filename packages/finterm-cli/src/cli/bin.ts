@@ -25,4 +25,13 @@ process.stderr.on('error', (err: NodeJS.ErrnoException) => {
 import { bootstrapProxy } from '../lib/proxy-bootstrap.js';
 import { runCli } from './cli.js';
 
-void bootstrapProxy().then(() => runCli());
+void bootstrapProxy()
+  .then(() => runCli())
+  .catch((error: unknown) => {
+    // Bootstrap failures (e.g. an invalid proxy configuration) happen before the
+    // CLI's own error handling is in place. Print a clean one-line message
+    // instead of dumping a raw stack trace.
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`finterm: ${message}`);
+    process.exit(1);
+  });
