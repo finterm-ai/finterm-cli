@@ -50,11 +50,12 @@
     "provenance": true
   },
   "scripts": {
+    "prepack": "pnpm run build",
     "build": "pnpm typecheck && node scripts/workspace-bin.mjs tsdown && node scripts/copy-docs.mjs postbuild && node scripts/check-bundle-leaks.mjs",
     "dev": "node scripts/workspace-bin.mjs tsdown --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm run build && pnpm test:unit && pnpm test:integration",
-    "test:unit": "node scripts/workspace-bin.mjs vitest run --passWithNoTests",
+    "test:unit": "node scripts/workspace-bin.mjs vitest run",
     "test:e2e": "node -e \"console.log('No public e2e tests yet')\"",
     "test:integration": "node scripts/workspace-bin.mjs vitest run --config vitest.config.integration.ts --passWithNoTests",
     "test:watch": "node scripts/workspace-bin.mjs vitest",
@@ -66,6 +67,7 @@
   },
   "dependencies": {
     "atomically": "^2.1.1",
+    "cli-highlight": "^2.1.11",
     "commander": "^15.0.0",
     "marked": "^15.0.12",
     "marked-terminal": "^7.3.0",

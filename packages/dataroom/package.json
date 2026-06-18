@@ -1,8 +1,12 @@
 {
   "name": "dataroom",
+  "private": true,
   "version": "0.0.1",
   "description": "Database-free DR/0.3 profile:file dataroom core",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",

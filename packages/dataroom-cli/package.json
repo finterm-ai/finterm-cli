@@ -4,6 +4,9 @@
   "private": true,
   "description": "Database-free DR/0.3 profile:file dataroom CLI commands",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "exports": {
     ".": {
       "types": "./src/index.ts",

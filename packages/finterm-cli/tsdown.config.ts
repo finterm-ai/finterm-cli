@@ -9,7 +9,7 @@ const version = getGitVersion();
 const commonOptions = {
   format: ['esm'] as 'esm'[],
   platform: 'node' as const,
-  target: 'node20' as const,
+  target: 'node22' as const,
   sourcemap: false,
   dts: true,
   define: {
@@ -62,7 +62,7 @@ export default defineConfig([
   {
     format: ['cjs'] as 'cjs'[],
     platform: 'node' as const,
-    target: 'node20' as const,
+    target: 'node22' as const,
     sourcemap: false,
     dts: false,
     entry: { 'bin-bootstrap': 'src/cli/bin-bootstrap.cjs' },

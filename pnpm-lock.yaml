@@ -105,6 +105,9 @@ importers:
       atomically:
         specifier: ^2.1.1
         version: 2.1.1
+      cli-highlight:
+        specifier: ^2.1.11
+        version: 2.1.11
       commander:
         specifier: ^15.0.0
         version: 15.0.0
