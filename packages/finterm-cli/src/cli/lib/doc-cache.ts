@@ -9,9 +9,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
-// =============================================================================
-// Scoring Constants
-// =============================================================================
+// Match scores, highest (exact) to lowest, used to rank fuzzy lookups.
 
 /** Score for exact filename match (with or without .md extension) */
 export const SCORE_EXACT_MATCH = 1.0;
@@ -27,10 +25,6 @@ export const SCORE_PARTIAL_BASE = 0.7;
 
 /** Minimum score threshold to return a fuzzy match result */
 export const SCORE_MIN_THRESHOLD = 0.5;
-
-// =============================================================================
-// Types
-// =============================================================================
 
 /**
  * Frontmatter fields used for documents.
@@ -77,10 +71,6 @@ export interface DocMatch {
   score: number;
 }
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
 /**
  * Estimate token count from text content.
  * Uses ~3.5 characters per token as a rough approximation.
@@ -126,14 +116,10 @@ function parseFrontmatter(content: string): DocFrontmatter | undefined {
         : undefined,
     };
   } catch {
-    // Invalid YAML in frontmatter - return undefined
+    // Malformed frontmatter must not break listing; treat the doc as untagged.
     return undefined;
   }
 }
-
-// =============================================================================
-// DocCache Class
-// =============================================================================
 
 /**
  * Options for loading the doc cache.

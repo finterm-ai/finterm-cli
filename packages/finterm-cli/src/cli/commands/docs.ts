@@ -13,7 +13,8 @@ import { renderMarkdown } from '../lib/markdown.js';
 import { showInPager } from '../lib/pager.js';
 
 /**
- * Get the dist directory path based on the binary location.
+ * Locate the bundled `dist/` directory by inspecting the running script's path, so docs
+ * resolve whether the CLI runs from a built binary or from source during development.
  */
 function getDistDir(): string {
   const scriptPath = process.argv[1] || '';
@@ -27,7 +28,8 @@ function getDistDir(): string {
 }
 
 /**
- * Load documentation content from bundled file.
+ * Load the bundled documentation, trying the built location first and source paths as a
+ * dev fallback. Returns minimal inline help if no file is found, so `docs` never fails.
  */
 export function loadDocsContent(): string {
   const distDir = getDistDir();
@@ -49,7 +51,6 @@ export function loadDocsContent(): string {
     }
   }
 
-  // Fallback inline content
   return `# Finterm CLI
 
 Run \`finterm --help\` for available commands.
@@ -57,6 +58,10 @@ Run \`finterm setup\` to install agent integration files.
 `;
 }
 
+/**
+ * Renders the bundled docs as markdown to a pager for humans, or as raw content in JSON
+ * mode so the text can be consumed programmatically.
+ */
 class DocsHandler extends BaseCommand {
   async run(): Promise<void> {
     const content = loadDocsContent();
@@ -71,6 +76,7 @@ class DocsHandler extends BaseCommand {
   }
 }
 
+/** Top-level `docs` command that displays the full bundled documentation. */
 export const docsCommand = new Command('docs')
   .description('Show full documentation')
   .action(async (_options, command) => {

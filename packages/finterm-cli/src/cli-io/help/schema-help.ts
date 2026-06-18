@@ -8,9 +8,12 @@
 import type { z } from 'zod';
 import { mapSchemaToOptions, type CLIOptionSpec } from '../input/schema-mapper';
 
-// =============================================================================
-// Types
-// =============================================================================
+/**
+ * Column at which the trailing `# comment` is aligned, so that a block of field
+ * lines forms an even, scannable table. Fields wider than this still get one
+ * space of separation.
+ */
+const FIELD_COMMENT_COLUMN = 24;
 
 /** Options for generating schema help */
 export interface SchemaHelpOptions {
@@ -34,17 +37,9 @@ export interface FieldLineOptions {
   defaultValue?: unknown;
 }
 
-// =============================================================================
-// Field Formatting
-// =============================================================================
-
 /**
- * Format a single field line for help output.
- *
- * @param name - Field name
- * @param type - Field type
- * @param options - Formatting options
- * @returns Formatted field line
+ * Format a single field line for help output, aligning the comment column so a
+ * block of fields reads as a tidy table.
  */
 export function formatFieldLine(
   name: string,
@@ -53,13 +48,11 @@ export function formatFieldLine(
 ): string {
   const { required = true, isArray = false, description, choices, defaultValue } = options;
 
-  // Build type string
   let typeStr = type;
   if (isArray) {
     typeStr = `${type}[]`;
   }
 
-  // Build annotations
   const annotations: string[] = [];
 
   if (required) {
@@ -84,7 +77,6 @@ export function formatFieldLine(
     annotations.push(`choices: ${choices.join(' | ')}`);
   }
 
-  // Build comment
   const parts: string[] = [];
   if (description) {
     parts.push(description);
@@ -95,9 +87,8 @@ export function formatFieldLine(
 
   const comment = parts.length > 0 ? `# ${parts.join(' ')}` : '';
 
-  // Format the line with proper alignment
   const nameType = `${name}: ${typeStr}`;
-  const padding = Math.max(1, 24 - nameType.length);
+  const padding = Math.max(1, FIELD_COMMENT_COLUMN - nameType.length);
 
   return `${nameType}${' '.repeat(padding)}${comment}`.trimEnd();
 }
@@ -115,16 +106,8 @@ function optionToFieldLine(option: CLIOptionSpec): string {
   });
 }
 
-// =============================================================================
-// Schema Formatting
-// =============================================================================
-
 /**
  * Format a Zod object schema as YAML-style help text.
- *
- * @param schema - Zod object schema
- * @param indent - Indentation spaces
- * @returns Formatted schema lines
  */
 export function formatSchemaAsYaml(schema: z.ZodObject<z.ZodRawShape>, indent = 2): string {
   const options = mapSchemaToOptions(schema);
@@ -135,16 +118,9 @@ export function formatSchemaAsYaml(schema: z.ZodObject<z.ZodRawShape>, indent = 
   return lines.join('\n');
 }
 
-// =============================================================================
-// Help Generation
-// =============================================================================
-
 /**
- * Generate complete INPUT SCHEMA help text from a Zod schema.
- *
- * @param schema - Zod object schema
- * @param options - Generation options
- * @returns Complete help text with header and fields
+ * Generate complete INPUT SCHEMA help text from a Zod schema, including the
+ * format header and one line per field (or a "(no fields)" placeholder).
  */
 export function generateSchemaHelp(
   schema: z.ZodObject<z.ZodRawShape>,

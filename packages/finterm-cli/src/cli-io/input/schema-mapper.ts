@@ -18,10 +18,6 @@
 
 import type { z } from 'zod';
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /** CLI option types */
 export type CLIOptionType =
   | 'string'
@@ -51,9 +47,12 @@ export interface CLIOptionSpec {
   defaultValue?: unknown;
 }
 
-// =============================================================================
-// Zod 4.x Type Introspection
-// =============================================================================
+// Zod 4.x type introspection.
+//
+// Zod does not expose a stable public reflection API, so this module reads the
+// internal `_def` structure directly to derive CLI option shapes from a schema.
+// Centralizing those reads here keeps the version-specific assumptions in one
+// place.
 
 /** Internal Zod 4.x definition type */
 interface ZodDef {
@@ -83,16 +82,11 @@ function getDefType(schema: z.ZodTypeAny): string | undefined {
 }
 
 /**
- * Get the type name of a Zod schema, unwrapping wrappers.
- *
- * @param schema - Zod schema to inspect
- * @returns Type name string
+ * Map a Zod schema to its CLI option type, unwrapping optional/nullable/default
+ * wrappers first so the base type drives the mapping.
  */
 export function getZodTypeName(schema: z.ZodTypeAny): CLIOptionType {
-  // Unwrap wrappers to get to the base type
   const unwrapped = unwrapSchema(schema);
-
-  // Get type from Zod 4.x structure (uses type like "string", "number")
   const typeName = getDefType(unwrapped);
 
   switch (typeName) {
@@ -145,10 +139,8 @@ function unwrapSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 }
 
 /**
- * Check if a schema represents an optional field.
- *
- * @param schema - Zod schema to check
- * @returns True if the field is optional
+ * Whether a field may be omitted from CLI input. A `default` wrapper counts as
+ * optional because the schema supplies a value when the user omits the flag.
  */
 export function isOptionalField(schema: z.ZodTypeAny): boolean {
   const typeName = getDefType(schema);
@@ -161,20 +153,15 @@ export function isOptionalField(schema: z.ZodTypeAny): boolean {
 }
 
 /**
- * Get the description from a Zod schema.
- * In Zod 4.x, description is a direct property on the schema.
- *
- * @param schema - Zod schema to check
- * @returns Description string or undefined
+ * Get a field's `.describe()` text, falling back to the unwrapped inner schema
+ * since a description may be attached either to the wrapper or to the base type.
  */
 export function getSchemaDescription(schema: z.ZodTypeAny): string | undefined {
-  // In Zod 4.x, description is a direct property
   const directDesc = (schema as unknown as { description?: string }).description;
   if (directDesc) {
     return directDesc;
   }
 
-  // Check unwrapped schema
   const unwrapped = unwrapSchema(schema);
   return (unwrapped as unknown as { description?: string }).description;
 }
@@ -219,26 +206,19 @@ function getArrayElementType(schema: z.ZodTypeAny): CLIOptionType {
   return 'unknown';
 }
 
-// =============================================================================
-// Schema Mapping
-// =============================================================================
-
 /**
- * Map a Zod object schema to CLI option specifications.
- *
- * @param schema - Zod object schema
- * @returns Array of CLI option specifications
+ * Map every field of a Zod object schema to a CLI option specification, the
+ * single source the parser and help generator both consume.
  */
 export function mapSchemaToOptions(schema: z.ZodObject<z.ZodRawShape>): CLIOptionSpec[] {
-  // Get shape from Zod 4.x structure
   const def = getDef(schema);
   let shape: Record<string, z.ZodTypeAny> = {};
 
-  // In Zod 4.x, shape is stored directly in _def.shape (not as a function)
+  // In Zod 4.x the shape lives directly on _def.shape; fall back to the public
+  // `.shape` accessor if that internal layout ever changes.
   if (def.shape && typeof def.shape === 'object') {
     shape = def.shape;
   } else {
-    // Fallback: try schema.shape (public API)
     const directShape = (schema as unknown as { shape?: Record<string, z.ZodTypeAny> }).shape;
     if (directShape && typeof directShape === 'object') {
       shape = directShape;
@@ -264,7 +244,6 @@ function mapFieldToOption(name: string, schema: z.ZodTypeAny): CLIOptionSpec {
   const description = getSchemaDescription(schema);
   const defaultValue = getDefaultValue(schema);
 
-  // Handle arrays
   if (typeName === 'array') {
     const elementType = getArrayElementType(schema);
     return {
@@ -278,7 +257,6 @@ function mapFieldToOption(name: string, schema: z.ZodTypeAny): CLIOptionSpec {
     };
   }
 
-  // Handle enums
   if (typeName === 'enum') {
     const choices = getEnumValues(schema);
     return {
@@ -292,7 +270,6 @@ function mapFieldToOption(name: string, schema: z.ZodTypeAny): CLIOptionSpec {
     };
   }
 
-  // Handle other types
   return {
     name,
     type: typeName,

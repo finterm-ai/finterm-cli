@@ -1,3 +1,7 @@
+/**
+ * Visibility tiers for a tool. `preview` tools are gated behind an experimental opt-in;
+ * `unpublished` tools must never be exposed in this public package.
+ */
 export const PUBLICATION_STATES = ['unpublished', 'preview', 'published'] as const;
 
 export type PublicationState = (typeof PUBLICATION_STATES)[number];
@@ -37,10 +41,16 @@ export const FINTERM_TOOL_PUBLICATION_STATES: Record<
   institutional_holdings: 'published',
 };
 
+/** Controls whether preview-tier tools are included alongside published ones. */
 export interface PublishedToolRegistryOptions {
+  /** When true, also reveal `preview` tools; null/false shows only `published`. */
   experimental: boolean | null;
 }
 
+/**
+ * Tool ids the CLI should surface to the user, filtered by publication state.
+ * Preview tools appear only when experimental access is explicitly enabled.
+ */
 export function visibleFintermToolIds(
   options: PublishedToolRegistryOptions = { experimental: null }
 ): FintermToolId[] {

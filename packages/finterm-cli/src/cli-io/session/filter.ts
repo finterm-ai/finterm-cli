@@ -9,12 +9,7 @@
 import type { CliSession } from './schemas';
 import { STABLE_FIELDS, UNSTABLE_FIELDS } from './schemas';
 
-// Re-export CliSession type for convenience
 export type { CliSession };
-
-// =============================================================================
-// Types
-// =============================================================================
 
 /** Partial session with only stable fields */
 export type StableSession = Pick<
@@ -38,18 +33,9 @@ export interface FilterOptions {
   durationPlaceholder?: number;
 }
 
-// =============================================================================
-// Field Filtering
-// =============================================================================
-
 /**
- * Filter out unstable fields from a session, keeping only stable fields.
- *
- * This is useful for golden test comparisons where you want to ignore
- * non-deterministic data like timestamps and session IDs.
- *
- * @param session - The full CLI session
- * @returns Session with only stable fields
+ * Keep only the deterministic fields of a session, dropping timestamps, IDs, and
+ * other run-varying data so two runs can be compared directly.
  */
 export function filterUnstableFields(session: CliSession): Partial<StableSession> {
   const result: Partial<StableSession> = {};
@@ -65,12 +51,8 @@ export function filterUnstableFields(session: CliSession): Partial<StableSession
 }
 
 /**
- * Filter out stable fields from a session, keeping only unstable fields.
- *
- * This is useful for extracting metadata that varies between runs.
- *
- * @param session - The full CLI session
- * @returns Session with only unstable fields
+ * Keep only the run-varying fields of a session, useful for extracting the
+ * metadata (timestamps, IDs, environment) that the stable view omits.
  */
 export function filterStableFields(session: CliSession): Partial<UnstableSession> {
   const result: Partial<UnstableSession> = {};
@@ -85,20 +67,9 @@ export function filterStableFields(session: CliSession): Partial<UnstableSession
   return result;
 }
 
-// =============================================================================
-// Session Normalization
-// =============================================================================
-
 /**
- * Normalize a session by replacing unstable fields with placeholders.
- *
- * This produces a deterministic session object suitable for golden test
- * comparisons. The result is still a valid CliSession but with all
- * unstable fields replaced by fixed values.
- *
- * @param session - The full CLI session
- * @param options - Normalization options
- * @returns Normalized session with placeholder values for unstable fields
+ * Replace a session's run-varying fields with fixed placeholders, yielding a
+ * deterministic but still valid CliSession suitable for golden-test comparison.
  */
 export function normalizeSession(session: CliSession, options: FilterOptions = {}): CliSession {
   const {

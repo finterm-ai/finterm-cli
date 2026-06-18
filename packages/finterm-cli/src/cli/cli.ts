@@ -32,12 +32,17 @@ import { getCommandContext } from './lib/context.js';
 import { emitActivityStats } from './lib/activity-stats.js';
 
 /**
- * Check if --json flag is present in argv.
+ * Detect `--json` directly from argv, before Commander parses options, so early
+ * error output can pick the right format.
  */
 function isJsonMode(): boolean {
   return process.argv.includes('--json');
 }
 
+/**
+ * Detect `--experimental` from argv at program-build time, so preview command
+ * groups can be registered (or hidden) before parsing.
+ */
 function isExperimentalMode(): boolean {
   return process.argv.includes('--experimental');
 }
@@ -136,10 +141,8 @@ export function createProgram(): Command {
     .helpOption('--help', 'Display help for command')
     .showHelpAfterError('(add --help for additional information)');
 
-  // Configure colored help output (respects --color option)
   configureColoredHelp(program);
 
-  // Global options
   program
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--verbose', 'Enable verbose output')
@@ -177,12 +180,15 @@ export function createProgram(): Command {
   program.commandsGroup('Point Data Tools:');
   program.addCommand(createToolCommand({ experimental: isExperimentalMode() }));
 
-  // Apply colored help to all commands recursively
   applyColoredHelpToAllCommands(program);
 
   return program;
 }
 
+/**
+ * Emit end-of-run activity stats without ever failing the command: stats are a
+ * diagnostic nicety, so errors are swallowed unless `--debug` asks to see them.
+ */
 async function safeEmitActivityStats(program: Command): Promise<void> {
   try {
     await emitActivityStats(getCommandContext(program));

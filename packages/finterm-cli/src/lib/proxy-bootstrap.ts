@@ -9,6 +9,11 @@
  * Must be called synchronously before any fetch calls are made.
  */
 
+/**
+ * Route Node's global fetch through an HTTP(S) proxy when one is configured via the
+ * standard proxy environment variables. No-op when no proxy is set; throws with a clear
+ * message if the configured proxy URL is malformed.
+ */
 export async function bootstrapProxy(): Promise<void> {
   const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 

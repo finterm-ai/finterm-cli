@@ -11,12 +11,7 @@ import { homedir } from 'node:os';
 import { writeFile } from 'atomically';
 import type { CliSession } from './schemas';
 
-// Re-export CliSession type for convenience
 export type { CliSession };
-
-// =============================================================================
-// Types
-// =============================================================================
 
 /** Options for creating a session logger */
 export interface SessionLoggerOptions {
@@ -26,25 +21,16 @@ export interface SessionLoggerOptions {
   createDir: boolean;
 }
 
-// =============================================================================
-// Default Paths
-// =============================================================================
-
 /**
- * Get the default log directory path.
- *
- * @returns Path to ~/.finterm/logs
+ * Default log directory (`~/.finterm/logs`).
  */
 export function getDefaultLogDir(): string {
   return join(homedir(), '.finterm', 'logs');
 }
 
-// =============================================================================
-// Session Logger Class
-// =============================================================================
-
 /**
- * Logger for CLI sessions.
+ * Writes each CLI session to its own JSON file under a log directory, for
+ * debugging and golden-test capture. Can create the directory on demand.
  */
 export class SessionLogger {
   private logDir: string;
@@ -54,20 +40,16 @@ export class SessionLogger {
     this.logDir = options.logDir;
     this.createDir = options.createDir;
 
-    // Create directory on construction if requested
     if (this.createDir && !existsSync(this.logDir)) {
       mkdirSync(this.logDir, { recursive: true });
     }
   }
 
   /**
-   * Log a CLI session to a file.
-   *
-   * @param session - The session to log
-   * @returns Path to the created log file
+   * Write a session to a new log file and return its path. Throws if the log
+   * directory is missing and this logger was not configured to create it.
    */
   async logSession(session: CliSession): Promise<string> {
-    // Ensure directory exists
     if (!existsSync(this.logDir)) {
       if (this.createDir) {
         await mkdir(this.logDir, { recursive: true });
@@ -86,9 +68,8 @@ export class SessionLogger {
   }
 
   /**
-   * List all session log files.
-   *
-   * @returns Array of log file paths
+   * List the paths of all session log files, sorted (which, given the timestamp
+   * filename prefix, also orders them chronologically).
    */
   async listLogs(): Promise<string[]> {
     if (!existsSync(this.logDir)) {
@@ -103,14 +84,12 @@ export class SessionLogger {
   }
 
   /**
-   * Generate a filename for a session log.
-   *
-   * Format: {date}_{command}_{sessionId}.json
+   * Build a `{date}_{time}_{command}_{sessionId}.json` filename. The leading
+   * date and time keep logs sortable; the session id keeps them unique.
    */
   private generateFilename(session: CliSession): string {
-    // Extract date from startTime (YYYY-MM-DD)
+    // Slice the ISO startTime into date (YYYY-MM-DD) and colon-free time (HH-MM-SS).
     const date = session.startTime.slice(0, 10);
-    // Extract time for uniqueness (HH-MM-SS)
     const time = session.startTime.slice(11, 19).replace(/:/g, '-');
     const command = session.command;
     const sessionId = session.sessionId;
@@ -119,15 +98,8 @@ export class SessionLogger {
   }
 }
 
-// =============================================================================
-// Factory Function
-// =============================================================================
-
 /**
  * Create a session logger.
- *
- * @param options - Logger options
- * @returns SessionLogger instance
  */
 export function createSessionLogger(options: SessionLoggerOptions): SessionLogger {
   return new SessionLogger(options);

@@ -23,6 +23,9 @@ import type {
 
 const MANIFEST_NOT_READY_ERROR_CODE = 'MANIFEST_NOT_READY';
 
+/** Lifetime of a mock login session, matching the live login expiry window. */
+const MOCK_LOGIN_SESSION_TTL_MS = 15 * 60 * 1000;
+
 const MOCK_BUNDLE_CATALOG: BundleCatalogData = {
   catalogVersion: '2026-06-17',
   bundles: [
@@ -50,6 +53,7 @@ function getMockBundleEntry(bundleName: string): BundleCatalogEntry | null {
   return MOCK_BUNDLE_CATALOG.bundles.find((bundle) => bundle.name === bundleName) ?? null;
 }
 
+/** Sentinel ticker that drives the mock into the failed-run path for testing. */
 const MOCK_FAILED_BUNDLE_TICKER = 'FAIL';
 
 function normalizeMockBundleRequest(
@@ -66,6 +70,11 @@ function normalizeMockBundleRequest(
   };
 }
 
+/**
+ * Recover the bundle and ticker from a mock run id. Run ids are deterministic
+ * (`run_ph_mock_<bundle>_<ticker>`) so the mock can answer status/result/artifacts
+ * queries statelessly, without tracking issued runs.
+ */
 function parseMockRunId(runId: string): { bundleName: string; ticker: string } | null {
   const match = /^run_ph_mock_(company_web_research)_([A-Z0-9.]+)$/.exec(runId);
   if (!match) {
@@ -99,6 +108,11 @@ function buildMockRun(entry: BundleCatalogEntry, params: BundleRunRequest): Bund
   };
 }
 
+/**
+ * Network-free implementation of {@link FintermAPIClient} for tests and offline demos.
+ * Returns deterministic, hand-authored fixtures and has no cache; selected by
+ * createAPIClient when mock mode is enabled.
+ */
 class PublicMockAPIClient implements FintermAPIClient {
   readonly baseUrl = 'mock://finterm-api';
   private _token: string | null = null;
@@ -131,7 +145,7 @@ class PublicMockAPIClient implements FintermAPIClient {
       pollSecret,
       loginUrl: `mock://finterm/cli-login#session=${sessionId}`,
       pollUrl: 'mock://finterm-api/cli/login/poll',
-      expiresAt: Date.now() + 15 * 60 * 1000,
+      expiresAt: Date.now() + MOCK_LOGIN_SESSION_TTL_MS,
     };
   }
 

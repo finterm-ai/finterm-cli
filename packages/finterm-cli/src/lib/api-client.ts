@@ -1,13 +1,10 @@
 /**
- * Finterm API Client
- *
  * HTTP client for the Finterm API.
- * Features:
- * - Retry logic with exponential backoff (1s, 2s, 4s)
- * - Configurable timeouts (30s default, 60s for SEC fetch)
- * - Token-based authentication
- * - Type-safe request/response handling
- * - Mock mode support via FINTERM_MOCK_MODE=client
+ *
+ * Wraps fetch with the cross-cutting concerns every command needs: bearer-token auth,
+ * exponential-backoff retries for transient failures, per-endpoint timeouts, response
+ * caching, and a request observer for `--debug` instrumentation. A mock mode
+ * (FINTERM_MOCK_MODE=client) swaps in a network-free client for tests and demos.
  */
 
 import { isMockMode } from '../cli-io/settings.js';
@@ -57,28 +54,20 @@ export type ApiRequestEvent =
 
 export type ApiRequestObserver = (event: ApiRequestEvent) => void;
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Default timeout for most endpoints (30 seconds) */
+/** Default request timeout for most endpoints. */
 export const DEFAULT_TIMEOUT_MS = 30000;
 
-/** Extended timeout for SEC filing fetch (60 seconds) */
+/** Extended timeout for SEC filing fetch, which can return large documents slowly. */
 export const SEC_FETCH_TIMEOUT_MS = 60000;
 
-/** Maximum number of retry attempts */
+/** Maximum number of retry attempts. */
 export const MAX_RETRIES = 3;
 
-/** Maximum backoff time in milliseconds */
+/** Ceiling on exponential backoff so a long retry chain cannot stall indefinitely. */
 const MAX_BACKOFF_MS = 8000;
 
-/** Base backoff time in milliseconds */
+/** First-retry backoff; each subsequent attempt doubles up to {@link MAX_BACKOFF_MS}. */
 const BASE_BACKOFF_MS = 1000;
-
-// =============================================================================
-// Retry Logic
-// =============================================================================
 
 /** Retry configuration */
 export interface RetryConfig {
@@ -116,18 +105,18 @@ export function calculateBackoff(attempt: number): number {
  * @returns true if should retry
  */
 export function shouldRetry(error: unknown, attempt: number): boolean {
-  // Don't retry if max attempts reached
   if (attempt >= MAX_RETRIES) {
     return false;
   }
 
-  // Check for network/timeout errors
   if (error instanceof Error) {
+    // fetch surfaces transient connectivity failures as TypeError; aborts come through
+    // as AbortError when our timeout fires. Both are worth another attempt.
     const name = error.name.toLowerCase();
     if (name === 'fetcherror' || name === 'aborterror' || name === 'typeerror') {
       return true;
     }
-    // Check message for common network errors
+    // Some runtimes only expose the underlying network failure in the message text.
     const message = error.message.toLowerCase();
     if (
       message.includes('econnrefused') ||
@@ -140,10 +129,9 @@ export function shouldRetry(error: unknown, attempt: number): boolean {
     }
   }
 
-  // Check for HTTP status codes
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const status = (error as { status: number }).status;
-    // Retry on server errors that might be transient
+    // Transient server-side conditions: gateway errors plus rate limiting (429).
     if (status === 502 || status === 503 || status === 504 || status === 429) {
       return true;
     }
@@ -152,16 +140,9 @@ export function shouldRetry(error: unknown, attempt: number): boolean {
   return false;
 }
 
-/**
- * Sleep for a specified duration.
- */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// =============================================================================
-// Response Types
-// =============================================================================
 
 /** Login start response */
 export interface LoginStartResponse {
@@ -197,16 +178,22 @@ export type BundleDeliveryMode =
   | 'summary_json'
   | 'dataroom_sync';
 
+/** How a run was executed end to end, distinct from the per-step runtime adapter. */
 export type BundleRunLifecycle = 'placeholder' | 'mock_runtime' | 'runtime_http';
 
 export type BundleRuntimeAdapter = 'mock' | 'http';
 
+/** Failure detail on a run; `retryable` tells the caller whether to poll again. */
 export interface BundleRunErrorData {
   code: string;
   message: string;
   retryable: boolean;
 }
 
+/**
+ * Resource usage for a run. Fields are camelCase here but the server may emit either
+ * camelCase or snake_case, so the client normalizes before constructing this shape.
+ */
 export interface BundleUsageSummaryData {
   requests?: number;
   inputTokens?: number;
@@ -214,6 +201,7 @@ export interface BundleUsageSummaryData {
   costUsd?: number;
 }
 
+/** One bundle in the catalog, including its run endpoint and required auth scopes. */
 export interface BundleCatalogEntry {
   name: string;
   descriptorId: string;
@@ -237,6 +225,7 @@ export interface BundleCatalogData {
   };
 }
 
+/** Caller-supplied inputs for starting a bundle run; all fields are optional inputs. */
 export interface BundleRunRequest {
   ticker?: string;
   companyName?: string;
@@ -246,6 +235,10 @@ export interface BundleRunRequest {
   parameters?: Record<string, unknown>;
 }
 
+/**
+ * Status of a bundle run as returned by run/status endpoints. `state` is a server
+ * alias for `status`; the client populates both so callers can read either.
+ */
 export interface BundleRunData {
   runId: string;
   bundleName: string;
@@ -272,6 +265,7 @@ export interface BundleRunData {
   };
 }
 
+/** A completed run plus its `result` payload, returned by the result endpoint. */
 export interface BundleRunResultData {
   runId: string;
   bundleName: string;
@@ -286,6 +280,7 @@ export interface BundleRunResultData {
   error?: BundleRunErrorData | null;
 }
 
+/** The artifact listing for a run, returned by the artifacts endpoint. */
 export interface BundleArtifactsData {
   runId: string;
   bundleName: string;
@@ -334,6 +329,11 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Coerce a server usage payload into {@link BundleUsageSummaryData}, accepting both
+ * camelCase and snake_case keys. Returns `undefined` when nothing usable is present so
+ * callers can distinguish "no usage data" from an explicit null.
+ */
 function normalizeBundleUsageSummary(value: unknown): BundleUsageSummaryData | null | undefined {
   if (value === null) {
     return null;
@@ -360,6 +360,10 @@ function normalizeBundleUsageSummary(value: unknown): BundleUsageSummaryData | n
   return Object.keys(summary).length > 0 ? summary : undefined;
 }
 
+/**
+ * Reconcile a run payload into the camelCase client shape, tolerating snake_case keys
+ * from the server and backfilling `state` from `status` so both are always populated.
+ */
 function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(value: unknown): T {
   if (!isObjectRecord(value)) {
     return value as T;
@@ -386,6 +390,7 @@ function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(v
   } as T;
 }
 
+/** Reconcile an artifacts payload into the client shape (see normalizeBundleRunData). */
 function normalizeBundleArtifactsData(value: unknown): BundleArtifactsData {
   if (!isObjectRecord(value)) {
     return value as BundleArtifactsData;
@@ -402,6 +407,7 @@ function normalizeBundleArtifactsData(value: unknown): BundleArtifactsData {
   } as unknown as BundleArtifactsData;
 }
 
+/** Reconcile a sync-manifest payload (including each file entry) into the client shape. */
 function normalizeSyncManifestData(value: unknown): SyncManifestData {
   if (!isObjectRecord(value)) {
     return value as SyncManifestData;
@@ -426,6 +432,7 @@ function normalizeSyncManifestData(value: unknown): SyncManifestData {
   } as SyncManifestData;
 }
 
+/** Apply a data normalizer to the `data` field of an API envelope, leaving it otherwise intact. */
 function normalizeResponseData<T>(
   response: unknown,
   normalizeData: (value: unknown) => T
@@ -519,6 +526,7 @@ function extractApiErrorCode(error: unknown): string | undefined {
 interface RequestOptions {
   timeout?: number;
   requiresAuth: boolean;
+  /** `null` means "use the per-method default" (POST cacheable, GET not). */
   cacheable: boolean | null;
 }
 
@@ -531,10 +539,6 @@ const AUTHENTICATED_REQUEST_OPTIONS: RequestOptions = {
   requiresAuth: true,
   cacheable: null,
 };
-
-// =============================================================================
-// API Client Interface
-// =============================================================================
 
 /**
  * Finterm API Client interface.
@@ -640,10 +644,6 @@ export interface FintermAPIClient {
   /** Set a callback that fires on each cache lookup (for verbose logging). */
   setOnCacheLookup(cb: ((result: CacheLookupResult) => void) | null): void;
 }
-
-// =============================================================================
-// Live API Client Implementation
-// =============================================================================
 
 /**
  * Live API client that makes actual HTTP requests.
@@ -1151,10 +1151,6 @@ class LiveFintermAPIClient implements FintermAPIClient {
     }
   }
 }
-
-// =============================================================================
-// Factory Function
-// =============================================================================
 
 /**
  * Create an API client instance.

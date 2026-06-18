@@ -10,10 +10,6 @@
 
 import { z } from 'zod';
 
-// =============================================================================
-// Command Result Schema
-// =============================================================================
-
 /**
  * Schema for command execution result.
  */
@@ -31,12 +27,10 @@ export const CommandResultSchema = z.object({
 /** Type for command result */
 export type CommandResult = z.infer<typeof CommandResultSchema>;
 
-// =============================================================================
-// CLI Session Schema
-// =============================================================================
-
 /**
- * Schema for a complete CLI session log entry.
+ * Schema for a complete CLI session log entry. Fields are grouped into unstable
+ * (run-varying) and stable (deterministic) sets; see STABLE_FIELDS and
+ * UNSTABLE_FIELDS, which the golden-test filters rely on.
  */
 export const CliSessionSchema = z.object({
   // Unstable fields (non-deterministic)
@@ -69,10 +63,6 @@ export const CliSessionSchema = z.object({
 /** Type for CLI session */
 export type CliSession = z.infer<typeof CliSessionSchema>;
 
-// =============================================================================
-// Field Classification
-// =============================================================================
-
 /**
  * Stable fields - deterministic, should match between test runs.
  * These are used for golden test comparisons.
@@ -98,22 +88,12 @@ export const UNSTABLE_FIELDS: readonly string[] = [
   'environment',
 ] as const;
 
-/**
- * Check if a field name is a stable field.
- *
- * @param fieldName - Field name to check
- * @returns True if the field is stable
- */
+/** Whether a field name belongs to the stable (deterministic) set. */
 export function isStableField(fieldName: string): boolean {
   return STABLE_FIELDS.includes(fieldName);
 }
 
-/**
- * Check if a field name is an unstable field.
- *
- * @param fieldName - Field name to check
- * @returns True if the field is unstable
- */
+/** Whether a field name belongs to the unstable (run-varying) set. */
 export function isUnstableField(fieldName: string): boolean {
   return UNSTABLE_FIELDS.includes(fieldName);
 }

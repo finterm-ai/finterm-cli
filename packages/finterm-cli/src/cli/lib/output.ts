@@ -9,13 +9,14 @@ import type { CommandContext, ColorOption } from './context.js';
 import { shouldColorize } from './context.js';
 
 /**
- * Standard icons for CLI output.
+ * Standard status glyphs for CLI output. Written as escapes so the source stays
+ * ASCII-clean; plain Unicode (not emoji) renders consistently across terminals.
  */
 export const ICONS = {
-  SUCCESS: '\u2713', // U+2713
-  ERROR: '\u2717', // U+2717
-  WARN: '\u26A0', // U+26A0
-  NOTICE: '\u2022', // U+2022
+  SUCCESS: '\u2713', // check mark
+  ERROR: '\u2717', // ballot x
+  WARN: '\u26A0', // warning sign
+  NOTICE: '\u2022', // bullet
 } as const;
 
 /**
@@ -27,6 +28,15 @@ export const MAX_HELP_WIDTH = 88;
  * Default terminal width when stdout is not a TTY.
  */
 const DEFAULT_TERMINAL_WIDTH = 80;
+
+/** Total width of the decorative rules drawn by `heading()` and `rule()`. */
+const DIAGNOSTIC_RULE_WIDTH = 51;
+
+/** Fixed columns a `heading()` line spends on its `─── ` prefix and the space around the title. */
+const HEADING_DECORATION_WIDTH = 5;
+
+/** Milliseconds between spinner frame redraws. */
+const SPINNER_FRAME_INTERVAL_MS = 80;
 
 /**
  * Get the terminal width, falling back to default if not available.
@@ -63,7 +73,7 @@ export function createColoredHelpConfig(colorOption: ColorOption = 'auto') {
   const colors = pc.createColors(shouldColorize(colorOption));
 
   return {
-    helpWidth: Math.min(MAX_HELP_WIDTH, process.stdout.columns || 80),
+    helpWidth: Math.min(MAX_HELP_WIDTH, process.stdout.columns || DEFAULT_TERMINAL_WIDTH),
     styleTitle: (str: string) => colors.bold(colors.cyan(str)),
     styleCommandText: (str: string) => colors.green(str),
     styleOptionText: (str: string) => colors.yellow(str),
@@ -231,11 +241,8 @@ export class OutputManager {
    */
   heading(title: string): void {
     if (!this.ctx.json) {
-      console.error(
-        this.colors.heading(
-          this.colors.stat(`─── ${title} ${'─'.repeat(Math.max(0, 46 - title.length))}`)
-        )
-      );
+      const trailing = Math.max(0, DIAGNOSTIC_RULE_WIDTH - HEADING_DECORATION_WIDTH - title.length);
+      console.error(this.colors.heading(this.colors.stat(`─── ${title} ${'─'.repeat(trailing)}`)));
     }
   }
 
@@ -244,7 +251,7 @@ export class OutputManager {
    */
   rule(): void {
     if (!this.ctx.json) {
-      console.error(this.colors.stat('─'.repeat(51)));
+      console.error(this.colors.stat('─'.repeat(DIAGNOSTIC_RULE_WIDTH)));
     }
   }
 
@@ -321,7 +328,7 @@ export class OutputManager {
     };
 
     write();
-    const interval = setInterval(write, 80);
+    const interval = setInterval(write, SPINNER_FRAME_INTERVAL_MS);
 
     return {
       message: (msg: string) => {

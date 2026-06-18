@@ -1,9 +1,18 @@
+/**
+ * Minimal, dependency-free `.env` loader used at CLI startup.
+ *
+ * A tiny in-repo parser (rather than the `dotenv` package) keeps the startup path free
+ * of third-party code and gives full control over the walk-upward + first-value-wins
+ * precedence the CLI relies on.
+ */
+
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const DOTENV_FILENAMES = ['.env.local', '.env'] as const;
 const DOTENV_LINE = /^\s*(?:export\s+)?([\w.-]+)\s*(?:=|:)\s*(.*)?\s*$/;
 
+/** Mutable environment map the loader writes into; `process.env` by default. */
 export type DotenvTarget = Record<string, string | undefined>;
 
 /**

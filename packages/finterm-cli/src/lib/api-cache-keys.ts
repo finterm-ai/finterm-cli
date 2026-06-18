@@ -1,15 +1,10 @@
 /**
  * Cache key generation for finterm-cli API calls.
  *
- * Uses stable HTTP cache-key rules:
- * - Colon separators between key parts
- * - sortedParamsString for deterministic param ordering
- * - Normalization (filter nulls, sort keys)
+ * Keys must be deterministic so the same logical request always maps to the same
+ * entry regardless of object key order: parameters are normalized (nulls filtered,
+ * keys sorted) and rendered structurally before being joined into a stable string.
  */
-
-// =============================================================================
-// Endpoint Configuration
-// =============================================================================
 
 /**
  * Map API path to cache key prefix.
@@ -32,7 +27,8 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
 
 /**
- * TTL per endpoint path in milliseconds.
+ * TTL per endpoint path in milliseconds. TTLs reflect how often each dataset
+ * meaningfully changes (intraday sentiment is short-lived; filings are stable).
  * Only endpoints in ENDPOINT_KEY_PREFIX are cacheable.
  */
 export const ENDPOINT_TTL_MS: Record<string, number> = {
@@ -46,10 +42,6 @@ export const ENDPOINT_TTL_MS: Record<string, number> = {
   '/api/v1/sec/search': SEVEN_DAYS_MS,
   '/api/v1/ticker-sentiment': ONE_HOUR_MS,
 };
-
-// =============================================================================
-// Key Generation
-// =============================================================================
 
 /**
  * Generate a deterministic cache key for an API request.
@@ -81,10 +73,6 @@ export function generateApiCacheKey(path: string, body: unknown): string | null 
 export function getEndpointTtlMs(path: string): number | null {
   return ENDPOINT_TTL_MS[path] ?? null;
 }
-
-// =============================================================================
-// Helpers
-// =============================================================================
 
 /**
  * Create a sorted, deterministic string from request parameters.

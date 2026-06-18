@@ -30,7 +30,7 @@ export abstract class BaseCommand {
    * The error message includes the original error context for better visibility.
    *
    * Note: Errors are NOT output here - let the top-level handler in cli.ts do it.
-   * This prevents duplicate error output in JSON mode (ar-k1q7).
+   * This prevents duplicate error output in JSON mode.
    */
   protected async execute<T>(action: () => Promise<T>, errorMessage: string): Promise<T> {
     try {
@@ -101,7 +101,8 @@ export abstract class BaseCommand {
 }
 
 /**
- * Helper to get output format from context.
+ * Collapse the `--json` flag into the single text/json discriminator that
+ * formatting code switches on, so callers never branch on `ctx.json` directly.
  */
 export function getOutputFormat(ctx: CommandContext): OutputFormat {
   return ctx.json ? 'json' : 'text';

@@ -37,12 +37,16 @@ export interface RecordedDownloadEvent {
   stats: DownloadStats;
 }
 
+/** Point-in-time view of everything recorded so far in the current CLI invocation. */
 export interface ActivitySnapshot {
   generatedAt: string;
   apiEvents: RecordedApiEvent[];
   downloads: RecordedDownloadEvent[];
 }
 
+// Process-wide accumulators for the single CLI invocation. They are module-level
+// (rather than threaded through call sites) so any layer that touches the API client
+// or the downloader can record activity without plumbing a collector everywhere.
 const apiEvents: RecordedApiEvent[] = [];
 const downloads: RecordedDownloadEvent[] = [];
 
@@ -75,6 +79,10 @@ export function resetActivityStats(): void {
   downloads.length = 0;
 }
 
+/**
+ * Render one completed API event as a single `< METHOD path ...` diagnostic line.
+ * Returns null for the `start` phase, which has no outcome worth printing yet.
+ */
 export function formatApiRequestEvent(event: ApiRequestEvent): string | null {
   if (event.phase === 'start') {
     return null;
@@ -151,6 +159,10 @@ function formatDownloadSummary(downloadEvents: RecordedDownloadEvent[]): string[
   ];
 }
 
+/**
+ * Build the activity-summary text block: one-line API and download rollups, plus
+ * per-event detail lines when `detailed` is set (driven by --debug).
+ */
 export function formatActivityLines(snapshot: ActivitySnapshot, detailed: boolean): string[] {
   const lines = [
     ...formatApiSummary(snapshot.apiEvents),
@@ -200,6 +212,11 @@ async function writeDebugSnapshot(snapshot: ActivitySnapshot): Promise<string> {
   return filePath;
 }
 
+/**
+ * Flush the run's activity to stderr (only under --verbose/--debug) and, in debug mode,
+ * persist a JSON snapshot for later triage. Resets the accumulators so a long-lived
+ * process does not carry one command's activity into the next.
+ */
 export async function emitActivityStats(ctx: CommandContext): Promise<void> {
   const snapshot = getActivitySnapshot();
   if (snapshot.apiEvents.length === 0 && snapshot.downloads.length === 0) {

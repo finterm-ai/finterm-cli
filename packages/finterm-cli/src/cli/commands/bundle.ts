@@ -41,6 +41,7 @@ import {
 import { recordDownloadStats } from '../lib/activity-stats.js';
 import { formatBytes, formatDuration } from '../lib/format.js';
 
+/** Options for `bundle run`, combining run parameters with the shared output-format flags. */
 interface BundleRunOptions extends ApiOutputOptions {
   companyName?: string;
   asOfDate?: string;
@@ -48,12 +49,17 @@ interface BundleRunOptions extends ApiOutputOptions {
   param?: string[];
 }
 
+/**
+ * Options for `bundle wait`. Values are strings because Commander passes them through
+ * unparsed; they are validated into positive integers before use.
+ */
 interface BundleWaitOptions {
   intervalMs?: string;
   timeoutMs?: string;
   maxErrors?: string;
 }
 
+/** Options for `bundle download`, controlling the target room and sync semantics. */
 interface BundleDownloadOptions {
   mode?: 'new' | 'merge';
   room?: string;
@@ -83,12 +89,22 @@ const COMMAND_FAILURE_EXIT_CODE = 1;
 
 const COMPANY_WEB_RESEARCH_BUNDLE = 'company_web_research';
 
+/**
+ * Bundles exposed by this CLI. The server may offer more, but commands accept and list
+ * only these so the published surface stays narrow and predictable.
+ */
 const PUBLISHED_BUNDLE_NAMES = new Set<string>([COMPANY_WEB_RESEARCH_BUNDLE]);
 
+/** Parameters a live (non-placeholder) company web research run cannot run without. */
 const COMPANY_WEB_RESEARCH_REQUIRED_LIVE_PARAMS = ['q', 'fy', 'prev_q', 'prev_fy'] as const;
 
+/** Terminal next-actions that indicate a wait finished on a failed run. */
 const FAILED_WAIT_NEXT_ACTIONS = new Set<BundleRunNextAction>(['inspect_error', 'resume_later']);
 
+/**
+ * Per-action result metadata used to wrap raw API responses in a stable wire-result
+ * envelope, keyed by command action name.
+ */
 const BUNDLE_RESULT_SPECS: Record<string, Omit<FallbackResultMeta, 'args'>> = {
   catalog: {
     schema: 'finterm.result:BundleCatalog/v1',
@@ -112,6 +128,10 @@ const BUNDLE_RESULT_SPECS: Record<string, Omit<FallbackResultMeta, 'args'>> = {
   },
 };
 
+/**
+ * Resolve the wire-result metadata for an action, defaulting to a generic schema/tool
+ * name when the action is not in {@link BUNDLE_RESULT_SPECS}.
+ */
 function buildBundleFallbackMeta(
   actionName: string,
   args: Record<string, unknown>
@@ -123,6 +143,7 @@ function buildBundleFallbackMeta(
   return { ...spec, args };
 }
 
+/** Convert a run request to the snake_case shape used in wire-result `args` echoes. */
 function snakeBundleRunRequest(
   bundleName: string,
   request: BundleRunRequest
@@ -138,6 +159,7 @@ function snakeBundleRunRequest(
   };
 }
 
+/** Parse repeated `--param key=value` flags into a parameter map, rejecting malformed entries. */
 function parseBundleParameters(values: string[] | null): Record<string, unknown> {
   const parameters: Record<string, unknown> = {};
   const entries = values ?? [];
@@ -152,6 +174,7 @@ function parseBundleParameters(values: string[] | null): Record<string, unknown>
   return parameters;
 }
 
+/** Reject bundle names not in the CLI's published set, with a message listing valid names. */
 function assertPublishedBundleName(bundleName: string): void {
   if (PUBLISHED_BUNDLE_NAMES.has(bundleName)) {
     return;
@@ -163,6 +186,7 @@ function assertPublishedBundleName(bundleName: string): void {
   );
 }
 
+/** Strip unpublished bundles from a catalog response so the CLI only surfaces its own set. */
 function filterPublishedBundleCatalogResponse(
   response: APIResponse<BundleCatalogData>
 ): APIResponse<BundleCatalogData> {
@@ -178,6 +202,10 @@ function filterPublishedBundleCatalogResponse(
   };
 }
 
+/**
+ * Validate a run request before hitting the API: the bundle must be published, and
+ * live company web research runs must supply the required fiscal-period parameters.
+ */
 function assertBundleRunRequest(bundleName: string, request: BundleRunRequest): void {
   assertPublishedBundleName(bundleName);
   if (bundleName !== COMPANY_WEB_RESEARCH_BUNDLE || request.mode === 'placeholder') {
@@ -196,6 +224,7 @@ function assertBundleRunRequest(bundleName: string, request: BundleRunRequest): 
   );
 }
 
+/** Parse a CLI numeric option to a positive integer, falling back when unset. */
 function parsePositiveInteger(value: string | null, fallback: number): number {
   if (value === null) {
     return fallback;
@@ -207,13 +236,22 @@ function parsePositiveInteger(value: string | null, fallback: number): number {
   return parsed;
 }
 
+/** Set a non-zero exit code when a wait completes on a failed run, for scripting/CI. */
 function markWaitStatusExitCode(status: AgentRunStatus): void {
   if (FAILED_WAIT_NEXT_ACTIONS.has(status.nextAction)) {
     process.exitCode = COMMAND_FAILURE_EXIT_CODE;
   }
 }
 
+/**
+ * Executes the `bundle` subcommands against the authenticated API, rendering every
+ * response through the shared wire-result envelope so text and JSON output stay aligned.
+ */
 class BundleHandler extends BaseCommand {
+  /**
+   * Shared path for read-only bundle actions: run one API call, wrap it in a wire
+   * result, render it, and propagate any error exit code.
+   */
   async run<T>(
     actionName: string,
     args: Record<string, unknown>,
@@ -235,6 +273,10 @@ class BundleHandler extends BaseCommand {
     markFintermWireErrorExitCode(wireResult);
   }
 
+  /**
+   * Create a bundle run and record it in the local run ledger so it can be resumed
+   * later. Separate from {@link run} because it has side effects beyond rendering.
+   */
   async createRun(
     bundleName: string,
     request: BundleRunRequest,
@@ -342,6 +384,7 @@ class BundleHandler extends BaseCommand {
     markWaitStatusExitCode(status);
   }
 
+  /** Sync a finished run's artifacts into a local dataroom and record transfer stats. */
   async download(runId: string, options: BundleDownloadOptions): Promise<void> {
     if (
       this.checkDryRun(`Would download bundle run artifacts into a local dataroom: ${runId}`, {
@@ -372,6 +415,7 @@ class BundleHandler extends BaseCommand {
   }
 }
 
+/** Text formatter for a run status, used as the non-JSON branch of `output.data`. */
 function printStatus(status: AgentRunStatus): void {
   console.log(`Run: ${status.runId}`);
   console.log(`State: ${status.state}`);
@@ -388,6 +432,7 @@ function printStatus(status: AgentRunStatus): void {
   console.log(status.message);
 }
 
+/** Text formatter for a download result, used as the non-JSON branch of `output.data`. */
 function printDownloadResult(result: DownloadResult): void {
   for (const warning of result.warnings) {
     console.error(`Warning: ${warning}`);
@@ -527,6 +572,7 @@ const downloadCommand = new Command('download')
     await handler.download(runId, options);
   });
 
+/** Top-level `bundle` command grouping the catalog, run lifecycle, and download subcommands. */
 export const bundleCommand = new Command('bundle')
   .description('Authenticated company research bundle catalog and run commands')
   .addCommand(catalogCommand)

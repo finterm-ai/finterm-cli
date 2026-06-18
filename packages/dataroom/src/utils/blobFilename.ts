@@ -59,9 +59,9 @@ function splitCodecSuffix(filename: string): { logical: string } {
 export function sanitizeForFilename(str: string, maxLength: number = MAX_COMPONENT_LENGTH): string {
   return str
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_') // Replace non-alphanumeric with underscore
-    .replace(/_+/g, '_') // Collapse multiple underscores
-    .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
     .slice(0, maxLength);
 }
 
@@ -113,7 +113,6 @@ export interface BlobFilenameOptions {
 export function generateBlobFilename(options: BlobFilenameOptions): string {
   const { source, type, identifier, content, extension } = options;
 
-  // Build components
   const components: string[] = [sanitizeForFilename(source)];
 
   if (type) {
@@ -124,16 +123,16 @@ export function generateBlobFilename(options: BlobFilenameOptions): string {
     components.push(sanitizeForFilename(identifier));
   }
 
-  // Add hash for uniqueness
   const contentHash = hash12(content);
   components.push(contentHash);
 
-  // Join and truncate if needed
   let basename = components.join('_');
   if (basename.length > MAX_FILENAME_LENGTH) {
-    // Keep hash at the end, truncate middle parts
+    // When over budget, truncate the descriptive prefix but always keep the
+    // full hash so the filename stays unique. The reserved character is the
+    // underscore that joins the prefix to the hash.
     const hashLen = contentHash.length;
-    const availableLen = MAX_FILENAME_LENGTH - hashLen - 1; // -1 for underscore before hash
+    const availableLen = MAX_FILENAME_LENGTH - hashLen - 1;
     const prefix = components.slice(0, -1).join('_').slice(0, availableLen);
     basename = `${prefix}_${contentHash}`;
   }

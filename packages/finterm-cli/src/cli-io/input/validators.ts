@@ -7,10 +7,6 @@
 
 import { extname } from 'path';
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /** Result of a validation operation */
 export interface ValidationResult<T> {
   /** Whether validation passed */
@@ -41,12 +37,9 @@ export interface FilePathOptions {
   allowedExtensions?: string[];
 }
 
-// =============================================================================
-// Validation Error
-// =============================================================================
-
 /**
- * Error thrown when validation fails.
+ * Error carrying the name of the field that failed, so callers can report which
+ * input was rejected without parsing the message.
  */
 export class ValidationError extends Error {
   /** The field that failed validation */
@@ -59,18 +52,12 @@ export class ValidationError extends Error {
   }
 }
 
-// =============================================================================
-// Validators
-// =============================================================================
-
 /** Ticker symbol pattern: 1-10 uppercase letters, optional dot for class shares */
 const TICKER_PATTERN = /^[A-Z]{1,10}(\.[A-Z]{1,2})?$/;
 
 /**
- * Validate a stock ticker symbol.
- *
- * @param ticker - The ticker to validate
- * @returns Validation result with normalized uppercase ticker
+ * Validate a stock ticker symbol, returning it upper-cased and trimmed so
+ * downstream lookups can rely on a canonical form.
  */
 export function validateTicker(ticker: string): ValidationResult<string> {
   if (!ticker || ticker.trim() === '') {
@@ -94,10 +81,8 @@ export function validateTicker(ticker: string): ValidationResult<string> {
 }
 
 /**
- * Validate an ISO date string.
- *
- * @param date - The date string to validate
- * @returns Validation result with the date string
+ * Validate an ISO date string. Checks both the textual shape and that the value
+ * names a real calendar date, since the regex alone admits dates like 2020-13-40.
  */
 export function validateDate(date: string): ValidationResult<string> {
   if (!date || date.trim() === '') {
@@ -106,13 +91,12 @@ export function validateDate(date: string): ValidationResult<string> {
 
   const trimmed = date.trim();
 
-  // Check basic ISO format (YYYY-MM-DD or full ISO)
   const isoDatePattern = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?)?$/;
   if (!isoDatePattern.test(trimmed)) {
     return { valid: false, error: 'Date must be in ISO format (YYYY-MM-DD)' };
   }
 
-  // Validate that the date is actually valid
+  // The regex admits impossible dates (e.g. month 13), so confirm it parses.
   const parsed = new Date(trimmed);
   if (isNaN(parsed.getTime())) {
     return { valid: false, error: 'Invalid date value' };
@@ -122,11 +106,8 @@ export function validateDate(date: string): ValidationResult<string> {
 }
 
 /**
- * Validate a date range.
- *
- * @param start - Start date (ISO format)
- * @param end - End date (ISO format)
- * @returns Validation result with the date range
+ * Validate a start/end date pair, rejecting ranges where the start falls after
+ * the end so callers never act on an inverted window.
  */
 export function validateDateRange(
   start: string,
@@ -156,11 +137,7 @@ export function validateDateRange(
 }
 
 /**
- * Validate a positive integer.
- *
- * @param value - The value to validate
- * @param options - Validation options
- * @returns Validation result with the integer
+ * Validate a positive integer, optionally allowing zero and enforcing a maximum.
  */
 export function validatePositiveInteger(
   value: number,
@@ -195,12 +172,9 @@ export function validatePositiveInteger(
 }
 
 /**
- * Validate a value against an enum of allowed values.
- *
- * @param value - The value to validate
- * @param allowedValues - Array of allowed values
- * @param options - Validation options
- * @returns Validation result with the normalized value
+ * Validate a value against a set of allowed values. On success the value from
+ * `allowedValues` is returned, so a case-insensitive match still normalizes to
+ * the canonical casing.
  */
 export function validateEnum<T extends string>(
   value: string,
@@ -220,16 +194,12 @@ export function validateEnum<T extends string>(
     };
   }
 
-  // Return the original casing from allowedValues
   return { valid: true, value: allowedValues[index] };
 }
 
 /**
- * Validate a file path.
- *
- * @param path - The file path to validate
- * @param options - Validation options
- * @returns Validation result with the path
+ * Validate a file path, optionally restricting it to an allowed set of
+ * extensions (compared case-insensitively).
  */
 export function validateFilePath(
   path: string,

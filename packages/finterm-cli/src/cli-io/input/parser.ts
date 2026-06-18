@@ -14,10 +14,6 @@ import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { parse as parseYaml } from 'yaml';
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /** Source of parsed input */
 export type InputSource = 'cli' | 'file' | 'inline-json';
 
@@ -41,18 +37,11 @@ export interface ParseInputOptions<T> {
   cliArgs?: Partial<T>;
 }
 
-// =============================================================================
-// Format Detection
-// =============================================================================
-
 /** Supported file formats */
 type FileFormat = 'json' | 'yaml';
 
 /**
- * Detect file format from extension.
- *
- * @param filePath - Path to the file
- * @returns Detected format, defaults to 'json'
+ * Detect file format from extension, defaulting to JSON for unknown extensions.
  */
 function detectFormat(filePath: string): FileFormat {
   const ext = extname(filePath).toLowerCase();
@@ -62,19 +51,11 @@ function detectFormat(filePath: string): FileFormat {
   return 'json';
 }
 
-// =============================================================================
-// Synchronous Parsing
-// =============================================================================
-
 /**
- * Parse content synchronously with Zod validation.
+ * Parse already-loaded content with Zod validation.
  *
- * This is a pure function - useful for testing with pre-loaded content.
+ * Pure (no I/O), so it can be unit-tested directly with in-memory content.
  *
- * @param schema - Zod schema to validate against
- * @param content - Raw content string
- * @param format - Content format ('json' or 'yaml')
- * @returns Validated data
  * @throws ZodError if validation fails
  * @throws SyntaxError if parsing fails
  */
@@ -83,22 +64,13 @@ export function parseInputSync<T>(schema: z.ZodSchema<T>, content: string, forma
   return schema.parse(parsed);
 }
 
-// =============================================================================
-// Async Parsing
-// =============================================================================
-
 /**
- * Parse input from multiple sources with Zod validation.
+ * Parse input from the first available source, in descending priority:
+ * inline JSON, then a file (JSON/YAML by extension), then a CLI-args object.
+ * Letting a single, explicit precedence drive selection keeps behavior
+ * predictable when a user supplies more than one source.
  *
- * Priority order:
- * 1. inputJson - Inline JSON string (highest priority)
- * 2. inputFile - File path (JSON or YAML based on extension)
- * 3. cliArgs - CLI arguments object (lowest priority)
- *
- * @param schema - Zod schema to validate against
- * @param options - Input options
- * @returns Parsed and validated input with source info
- * @throws Error if no valid input provided
+ * @throws Error if no source is provided
  * @throws ZodError if validation fails
  */
 export async function parseInput<T>(
@@ -107,14 +79,12 @@ export async function parseInput<T>(
 ): Promise<ParsedInput<T>> {
   const { inputJson, inputFile, cliArgs } = options;
 
-  // Priority 1: Inline JSON
   if (inputJson !== undefined && inputJson !== null) {
     const parsed: unknown = JSON.parse(inputJson);
     const data = schema.parse(parsed);
     return { data, source: 'inline-json' };
   }
 
-  // Priority 2: File input
   if (inputFile !== undefined && inputFile !== null) {
     const content = await readFile(inputFile, 'utf-8');
     const format = detectFormat(inputFile);
@@ -122,12 +92,10 @@ export async function parseInput<T>(
     return { data, source: 'file', filePath: inputFile };
   }
 
-  // Priority 3: CLI arguments
   if (cliArgs !== undefined && cliArgs !== null) {
     const data = schema.parse(cliArgs);
     return { data, source: 'cli' };
   }
 
-  // No valid input
   throw new Error('No input provided. Use --input-json, --input <file>, or provide CLI arguments.');
 }

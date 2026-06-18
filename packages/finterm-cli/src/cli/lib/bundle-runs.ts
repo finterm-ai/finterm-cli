@@ -107,6 +107,7 @@ const WAITABLE_RUN_STATES = new Set<BundleRunState>(['queued', 'running']);
 
 export type BundleRunState = BundleRunData['status'];
 
+/** The single follow-up step the CLI recommends to an agent for a run in a given state. */
 export type BundleRunNextAction =
   | 'wait'
   | 'download'
@@ -281,6 +282,7 @@ export interface DownloadResult {
   message: string;
 }
 
+/** Absolute path of the local run ledger, exposed so commands can show it to users. */
 export function getRunLedgerFilePath(): string {
   return getRunLedgerPath();
 }
@@ -435,6 +437,10 @@ async function writeLedgerFile(
   await writeFile(ledgerPath, JSON.stringify(ledger, null, JSON_PRETTY_PRINT_SPACES));
 }
 
+/**
+ * Read the most recently updated runs from the local ledger, newest first with the run
+ * id as a tiebreaker for stable ordering.
+ */
 export async function listRunLedger(options: { limit?: number } = {}): Promise<{
   ledgerPath: string;
   runs: RunLedgerEntry[];
@@ -559,6 +565,11 @@ async function fetchSyncManifestSafe(
   };
 }
 
+/**
+ * Resolve a run's full agent-facing status: combine the status read with artifact and
+ * sync-manifest probing to compute the recommended next action, refresh the local
+ * ledger, and return a single payload both text and JSON command output render.
+ */
 export async function getAgentRunStatus(
   client: FintermAPIClient,
   runId: string
@@ -645,6 +656,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Poll a run until it reaches a terminal, downloadable state or the timeout elapses.
+ * On timeout it returns the last known status marked `resume_later` rather than throwing,
+ * so a caller can save the run id and pick the work back up later. A transient read
+ * failure is tolerated up to `maxErrors` consecutive times; a missing run aborts at once.
+ */
 export async function waitForBundleRun(
   client: FintermAPIClient,
   runId: string,
@@ -698,9 +715,8 @@ export async function waitForBundleRun(
   }
 }
 
-// =============================================================================
-// Manifest-diff sync download
-// =============================================================================
+// Manifest-diff sync download: the rest of this file syncs a run's published files
+// into a local room by diffing the manifest against on-disk sync state.
 
 /** Persisted per-file record of the last content the CLI itself wrote. */
 interface SyncStateEntry {

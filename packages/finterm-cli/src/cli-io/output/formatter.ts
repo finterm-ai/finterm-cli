@@ -17,10 +17,6 @@
 
 import * as yaml from 'yaml';
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /** Supported output formats */
 export type OutputFormat = 'text' | 'json' | 'yaml';
 
@@ -39,16 +35,9 @@ export interface TextFormatOptions {
 /** Combined format options */
 export interface FormatOptions extends JsonFormatOptions, TextFormatOptions {}
 
-// =============================================================================
-// JSON Formatting
-// =============================================================================
-
 /**
- * Format data as JSON string.
- *
- * @param data - Data to format
- * @param options - Formatting options
- * @returns JSON string
+ * Format data as a JSON string. `undefined` renders as `null` so the output is
+ * always valid JSON.
  */
 export function formatAsJson(
   data: unknown,
@@ -56,7 +45,6 @@ export function formatAsJson(
 ): string {
   const { compact } = options;
 
-  // Handle undefined specially
   if (data === undefined) {
     return 'null';
   }
@@ -68,32 +56,16 @@ export function formatAsJson(
   return JSON.stringify(data, null, 2);
 }
 
-// =============================================================================
-// YAML Formatting
-// =============================================================================
-
 /**
- * Format data as YAML string.
- *
- * @param data - Data to format
- * @returns YAML string
+ * Format data as a YAML string.
  */
 export function formatAsYaml(data: unknown): string {
   return yaml.stringify(data);
 }
 
-// =============================================================================
-// Text Formatting
-// =============================================================================
-
 /**
- * Format data as human-readable text.
- *
- * Objects become key-value pairs, arrays become numbered lists.
- *
- * @param data - Data to format
- * @param options - Formatting options
- * @returns Formatted text string
+ * Format data as human-readable text: objects become key-value pairs and arrays
+ * become numbered lists, recursing with deeper indentation for nested values.
  */
 export function formatAsText(data: unknown, options: TextFormatOptions = {}): string {
   const { indent = 0 } = options;
@@ -116,7 +88,6 @@ export function formatAsText(data: unknown, options: TextFormatOptions = {}): st
     return String(data);
   }
 
-  // Handle arrays
   if (Array.isArray(data)) {
     if (data.length === 0) {
       return `${prefix}(empty list)`;
@@ -125,17 +96,15 @@ export function formatAsText(data: unknown, options: TextFormatOptions = {}): st
     return data
       .map((item, index) => {
         const itemText = formatAsText(item, { indent: indent + 1 });
-        // For simple items, put on same line
+        // Scalars stay on the index line; nested structures drop to their own lines.
         if (typeof item !== 'object' || item === null) {
           return `${prefix}${index + 1}. ${itemText}`;
         }
-        // For complex items, put on new line
         return `${prefix}${index + 1}.\n${itemText}`;
       })
       .join('\n');
   }
 
-  // Handle objects
   if (typeof data === 'object') {
     const entries = Object.entries(data);
     if (entries.length === 0) {
@@ -145,11 +114,10 @@ export function formatAsText(data: unknown, options: TextFormatOptions = {}): st
     return entries
       .map(([key, value]) => {
         const valueText = formatAsText(value, { indent: indent + 1 });
-        // For simple values, put on same line
+        // Scalars stay on the key line; nested structures drop to their own lines.
         if (typeof value !== 'object' || value === null) {
           return `${prefix}${key}: ${valueText}`;
         }
-        // For complex values, put on new line
         return `${prefix}${key}:\n${valueText}`;
       })
       .join('\n');
@@ -162,17 +130,9 @@ export function formatAsText(data: unknown, options: TextFormatOptions = {}): st
   return String(data);
 }
 
-// =============================================================================
-// Unified Format Function
-// =============================================================================
-
 /**
- * Format data in the specified output format.
- *
- * @param data - Data to format
- * @param format - Output format (default: 'text')
- * @param options - Format-specific options
- * @returns Formatted string
+ * Format data in the requested output format, the single entry point command
+ * handlers use to render a payload to text, JSON, or YAML.
  */
 export function formatOutput(
   data: unknown,

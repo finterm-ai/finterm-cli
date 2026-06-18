@@ -20,10 +20,18 @@ import {
   type ApiOutputOptions,
   type FallbackResultMeta,
 } from '../lib/wire-result.js';
-// =============================================================================
-// Generic Tool Handler
-// =============================================================================
 
+/** Earliest fiscal year accepted: the start of the SEC EDGAR electronic filing era. */
+const MIN_FILING_YEAR = 1993;
+
+/** Latest fiscal year accepted, with headroom for near-future filings. */
+const MAX_FILING_YEAR = 2030;
+
+/**
+ * Canonical result-schema metadata per tool, used to tag wire results and to
+ * synthesize a fallback envelope when the API response lacks one. Keyed by tool id
+ * so a missing entry surfaces as a compile error against `FintermToolId`.
+ */
 export const TOOL_RESULT_SPECS = {
   financial_statements: {
     schema: 'finterm.result:FinancialStatements/v1',
@@ -63,6 +71,11 @@ export const TOOL_RESULT_SPECS = {
   },
 } satisfies Record<FintermToolId, Omit<FallbackResultMeta, 'args'>>;
 
+/**
+ * Build the fallback result metadata for a tool call, defaulting the schema and tool
+ * name from the id when the tool is not in {@link TOOL_RESULT_SPECS}. This keeps newly
+ * added tools usable before their spec is registered.
+ */
 export function buildToolFallbackMeta(
   toolId: string,
   args: Record<string, unknown>
@@ -74,6 +87,7 @@ export function buildToolFallbackMeta(
   return { ...spec, args };
 }
 
+/** Commander option parser rejecting anything but a safe positive integer. */
 function parsePositiveInteger(value: string): number {
   if (!/^[1-9]\d*$/.test(value)) {
     throw new InvalidArgumentError('must be a positive integer');
@@ -85,17 +99,27 @@ function parsePositiveInteger(value: string): number {
   return parsed;
 }
 
+/**
+ * Commander option parser for a four-digit fiscal year, bounded to the range with usable
+ * SEC EDGAR data ({@link MIN_FILING_YEAR}..{@link MAX_FILING_YEAR}).
+ */
 function parseYear(value: string): number {
   if (!/^\d{4}$/.test(value)) {
     throw new InvalidArgumentError('must be a four-digit year');
   }
   const parsed = Number(value);
-  if (parsed < 1993 || parsed > 2030) {
-    throw new InvalidArgumentError('must be between 1993 and 2030');
+  if (parsed < MIN_FILING_YEAR || parsed > MAX_FILING_YEAR) {
+    throw new InvalidArgumentError(`must be between ${MIN_FILING_YEAR} and ${MAX_FILING_YEAR}`);
   }
   return parsed;
 }
 
+/**
+ * Shared handler for every `finterm tool <id>` subcommand: authenticates, runs the
+ * supplied API call, normalizes it to a wire result (or a fallback envelope on failure),
+ * renders it, and maps API-level errors to the process exit code. Each subcommand only
+ * supplies its id, args, and the typed client call.
+ */
 class ToolHandler extends BaseCommand {
   async run(
     toolId: string,
@@ -119,10 +143,6 @@ class ToolHandler extends BaseCommand {
     markFintermWireErrorExitCode(wireResult);
   }
 }
-
-// =============================================================================
-// Tool Subcommands
-// =============================================================================
 
 const financialStatementsCommand = new Command('financial_statements')
   .description('Get financial statements (balance sheet, income, cash flow)')
@@ -302,6 +322,11 @@ const filingsFetchCommand = new Command('sec_filing_fetch')
 
 type FilingPeriod = 'FY' | 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
+/**
+ * Parse a `YEAR:PERIOD` filing reference (e.g. `2024:FY`, `2024:Q3`), defaulting the
+ * period to full-year when omitted. Used by the diff command so two filings can be named
+ * in one compact argument.
+ */
 function parseFilingRef(value: string): { year: number; period: FilingPeriod } {
   const [yearStr, periodRaw] = value.split(':');
   const year = parseYear(yearStr ?? '');
@@ -312,9 +337,10 @@ function parseFilingRef(value: string): { year: number; period: FilingPeriod } {
       `Invalid filing reference "${value}". Expected YEAR:PERIOD, e.g. "2024:FY" or "2024:Q3".`
     );
   }
-  if (year < 1993 || year > 2030) {
+  if (year < MIN_FILING_YEAR || year > MAX_FILING_YEAR) {
     throw new Error(
-      `Invalid filing year "${year}" in "${value}". Year must be between 1993 and 2030.`
+      `Invalid filing year "${year}" in "${value}". ` +
+        `Year must be between ${MIN_FILING_YEAR} and ${MAX_FILING_YEAR}.`
     );
   }
   return { year, period: period as FilingPeriod };
@@ -511,9 +537,15 @@ const ALL_TOOL_COMMANDS = [
 ] as const;
 
 export interface CreateToolCommandOptions {
+  /** Include experimental/hidden tools; `null` defers to the default visibility policy. */
   experimental: boolean | null;
 }
 
+/**
+ * Assemble the `finterm tool` command, registering only the subcommands visible under the
+ * given experimental policy and ensuring every subcommand has an output-format option.
+ * Built dynamically so visibility can be gated without duplicating command definitions.
+ */
 export function createToolCommand(
   options: CreateToolCommandOptions = { experimental: null }
 ): Command {
@@ -539,6 +571,11 @@ export function createToolCommand(
   return command;
 }
 
+/**
+ * Guard against drift between the tool id registry and the registered subcommands: every
+ * expected id must have a subcommand and vice versa. Throws at startup rather than letting
+ * a missing or stray command surface as a confusing runtime gap.
+ */
 function validateRegisteredToolCommands(
   command: Command,
   expectedToolIds: ReadonlySet<string>

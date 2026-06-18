@@ -6,7 +6,11 @@
  */
 
 const BYTE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
+const BYTES_PER_UNIT = 1024;
 const MILLISECONDS_PER_SECOND = 1000;
+
+/** Below this value a unit is shown with one decimal place; at or above it, none. */
+const SINGLE_DECIMAL_THRESHOLD = 10;
 
 /** Format a byte count as a short human-readable string, e.g. `3.4 MB`. */
 export function formatBytes(bytes: number): string {
@@ -15,11 +19,11 @@ export function formatBytes(bytes: number): string {
   }
   let value = bytes;
   let unitIndex = 0;
-  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
-    value /= 1024;
+  while (value >= BYTES_PER_UNIT && unitIndex < BYTE_UNITS.length - 1) {
+    value /= BYTES_PER_UNIT;
     unitIndex += 1;
   }
-  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${BYTE_UNITS[unitIndex]}`;
+  return `${value >= SINGLE_DECIMAL_THRESHOLD || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${BYTE_UNITS[unitIndex]}`;
 }
 
 /** Format a millisecond duration as `Nms` (sub-second) or `N.Ns`. */

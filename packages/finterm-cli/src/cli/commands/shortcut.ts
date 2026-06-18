@@ -10,7 +10,8 @@ import { dirname, join } from 'node:path';
 import { DocCommandHandler, type DocCommandOptions } from '../lib/doc-command-handler.js';
 
 /**
- * Get the dist directory path based on the binary location.
+ * Resolve the bundled `dist` directory from the running binary's location, falling back
+ * to the in-repo path so the command works both when installed and when run from source.
  */
 function getDistDir(): string {
   const scriptPath = process.argv[1] || '';
@@ -23,28 +24,17 @@ function getDistDir(): string {
   return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
 }
 
-/**
- * Get search paths for shortcuts (dist first, then dev fallbacks).
- */
+/** Primary (installed) shortcut search location, rooted at the bundled `dist` dir. */
 function getShortcutPaths(): { paths: string[]; baseDir: string } {
   const distDir = getDistDir();
 
-  // Check if we're running from dist or dev
-  // If dist/docs/shortcuts exists, use dist as base
-  // Otherwise use dev paths
-
   return {
-    paths: [
-      // Production: dist/docs/shortcuts/
-      join('docs', 'shortcuts'),
-    ],
+    paths: [join('docs', 'shortcuts')],
     baseDir: distDir,
   };
 }
 
-/**
- * Get development fallback paths for shortcuts.
- */
+/** Source-tree fallback locations used when running before/without a build. */
 function getDevShortcutPaths(): { paths: string[]; baseDir: string }[] {
   return [
     {
@@ -58,19 +48,18 @@ function getDevShortcutPaths(): { paths: string[]; baseDir: string }[] {
   ];
 }
 
+/**
+ * Serves shortcuts: reusable instruction templates for common agent workflows. Earlier
+ * search paths shadow later ones, so the installed copy wins over source-tree fallbacks;
+ * missing directories are skipped during lookup.
+ */
 class ShortcutHandler extends DocCommandHandler {
   constructor(command: Command) {
-    // Try production paths first, then dev fallbacks
     const prodConfig = getShortcutPaths();
     const devConfigs = getDevShortcutPaths();
 
-    // Combine all possible paths - DocCache will skip non-existent dirs
     const allPaths: string[] = [];
-
-    // Add production path
     allPaths.push(...prodConfig.paths.map((p) => join(prodConfig.baseDir, p)));
-
-    // Add dev fallback paths
     for (const devConfig of devConfigs) {
       allPaths.push(...devConfig.paths.map((p) => join(devConfig.baseDir, p)));
     }
@@ -80,7 +69,7 @@ class ShortcutHandler extends DocCommandHandler {
       commandName: 'shortcut',
       typeNamePlural: 'shortcuts',
       paths: allPaths,
-      baseDir: '/', // Paths are absolute
+      baseDir: '/',
       agentHeader: '# Shortcut Instructions\n\nFollow these instructions:',
     });
   }

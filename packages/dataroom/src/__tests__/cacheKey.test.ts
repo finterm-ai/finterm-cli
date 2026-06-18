@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { urlKey, callKey, parseKey } from '../utils/cacheKey.js';
 import { canonicalizeForHash, actionHash } from '../utils/hash.js';
 
-// Canonicalization test vectors (ar-anz8 / rec 9, basis for cross-language #51).
+// Canonicalization test vectors.
 // These lock the canonical-form contract shared by callKey and actionHash.
 describe('canonicalizeForHash vectors', () => {
   const vectors: Array<[string, unknown, string]> = [

@@ -47,8 +47,13 @@ interface FileDigestCacheEntry {
   digest: string;
 }
 
+/**
+ * Per-room digest cache. Keyed weakly so the cache is reclaimed when a room
+ * object is dropped, avoiding unbounded growth across many opened rooms.
+ */
 const fileDigestCaches = new WeakMap<FileProfileRoom, Map<string, FileDigestCacheEntry>>();
 
+/** An opened profile:file room: its root plus resolved `files/` and `data/` dirs. */
 export interface FileProfileRoom {
   path: string;
   filesDir: string;
@@ -56,6 +61,10 @@ export interface FileProfileRoom {
   metadata: DataRoomMetadata & { profile: typeof ROOM_PROFILE_FILE };
 }
 
+/**
+ * A single artifact under `files/`, with its derived index entry, facets, and
+ * optional metadata pulled from frontmatter or a sidecar.
+ */
 export interface FileProfileFile {
   roomId: string;
   ref: ArtifactRef;
@@ -69,6 +78,10 @@ export interface FileProfileFile {
   metadata?: FileProfileMetadata;
 }
 
+/**
+ * Optional descriptive metadata for a file, merged from markdown frontmatter
+ * and `.meta.*` sidecars. All fields are best-effort and may be absent.
+ */
 export interface FileProfileMetadata {
   kind?: string;
   schemaId?: string;
@@ -78,6 +91,7 @@ export interface FileProfileMetadata {
   frontmatterKeys?: string[];
 }
 
+/** A single text-search hit: the matched file plus the matching line and snippet. */
 export interface FileProfileSearchMatch {
   roomId: string;
   ref: ArtifactRef;
@@ -89,12 +103,18 @@ export interface FileProfileSearchMatch {
   facets: ArtifactSearchFacets;
 }
 
+/** Filters and bounds for {@link searchFileProfileFiles}. */
 export interface FileProfileSearchOptions {
   pathPrefix?: string;
   limit?: number;
   facets?: FacetFilter[];
 }
 
+/**
+ * Open a profile:file room from a directory or its `dataroom.yml` path,
+ * validating that the manifest declares a compatible format and the `file`
+ * profile before returning a usable room handle.
+ */
 export async function openFileProfileRoom(inputPath: string): Promise<FileProfileRoom> {
   const resolved = resolve(inputPath);
   const roomPath = basename(resolved) === ROOM_METADATA_FILE ? dirname(resolved) : resolved;
@@ -138,6 +158,11 @@ export async function openFileProfileRoom(inputPath: string): Promise<FileProfil
   });
 }
 
+/**
+ * Construct a room handle from already-parsed metadata, without touching disk.
+ * Lets callers that already hold validated metadata avoid re-reading the
+ * manifest; still re-checks the format and profile to keep the invariant local.
+ */
 export function createFileProfileRoom(args: {
   roomPath: string;
   metadata: DataRoomMetadata;
@@ -160,12 +185,21 @@ export function createFileProfileRoom(args: {
   };
 }
 
+/**
+ * List every artifact under `files/`, sorted by path for deterministic output
+ * across platforms and runs.
+ */
 export function listFileProfileFiles(room: FileProfileRoom): FileProfileFile[] {
   const results: FileProfileFile[] = [];
   scanFileProfileDirectory(room, room.filesDir, results);
   return results.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+/**
+ * Query files by path prefix and facet filters, returning stable query records
+ * rather than the heavier internal file shape. Accepts a `files/`-prefixed
+ * prefix and strips it so callers can pass refs or display paths interchangeably.
+ */
 export function queryFileProfileFiles(
   room: FileProfileRoom,
   options: QueryFilesOptions = {}
@@ -197,6 +231,12 @@ export function queryFileProfileFiles(
   return results;
 }
 
+/**
+ * Build the full descriptor for one file from its room-relative path. Returns
+ * `undefined` (rather than throwing) for paths that are unsafe, missing, or not
+ * regular files, so directory scans and reads can skip them silently. An
+ * already-obtained `Stats` may be passed to avoid a redundant `stat` call.
+ */
 export function buildFileProfileFile(
   room: FileProfileRoom,
   relativePath: string,
@@ -245,6 +285,11 @@ export function buildFileProfileFile(
   }
 }
 
+/**
+ * Return a file's SHA-256, reusing a cached digest while size and mtime are
+ * unchanged. Hashing every file on each listing is the dominant cost for large
+ * rooms; the (size, mtime) pair is a cheap, good-enough staleness check.
+ */
 function getFileDigest(
   room: FileProfileRoom,
   relativePath: string,
@@ -276,6 +321,11 @@ function getFileDigestCache(room: FileProfileRoom): Map<string, FileDigestCacheE
   return cache;
 }
 
+/**
+ * Read a bounded slice of a file artifact, decoding text for textual content
+ * types. The read is capped at `maxBytes` (truncating large files) and guarded
+ * against symlink escapes so a malicious artifact cannot read outside the room.
+ */
 export async function readFileProfileArtifact(
   room: FileProfileRoom,
   ref: ArtifactRef | string,
@@ -313,6 +363,11 @@ export async function readFileProfileArtifact(
   };
 }
 
+/**
+ * Case-insensitive substring search over textual files, returning at most one
+ * match (the first matching line) per file. Streams files line by line so a
+ * large room can be searched without loading whole files into memory.
+ */
 export async function searchFileProfileFiles(
   room: FileProfileRoom,
   query: string,
@@ -359,6 +414,8 @@ function scanFileProfileDirectory(
   }
 
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    // Never follow symlinks while enumerating: a link could expose files from
+    // outside the room or loop infinitely. Reads enforce the same boundary.
     if (entry.isSymbolicLink()) {
       continue;
     }

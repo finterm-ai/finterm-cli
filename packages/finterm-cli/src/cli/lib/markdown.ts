@@ -44,13 +44,11 @@ export async function renderMarkdown(
   const useColors = shouldColorize(colorOption);
 
   if (!useColors) {
-    // Return plain markdown when colors are disabled
     return content;
   }
 
   const { marked, markedTerminal } = await loadMarkedModules();
 
-  // Configure marked with terminal renderer for this parse
   marked.use(
     markedTerminal({
       width: Math.min(MAX_HELP_WIDTH, process.stdout.columns || 80),

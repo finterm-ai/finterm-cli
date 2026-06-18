@@ -20,10 +20,7 @@ import { writeFileSync } from 'atomically';
 
 import { generateApiCacheKey, getEndpointTtlMs } from './api-cache-keys.js';
 
-// =============================================================================
-// Types
-// =============================================================================
-
+/** Counters surfaced in the session summary so users can see cache effectiveness. */
 export interface CacheStats {
   hits: number;
   memoryHits: number;
@@ -38,6 +35,7 @@ export interface CacheStats {
   totalWriteBytes: number;
 }
 
+/** A cached response plus the metadata needed to expire and report on it. */
 export interface CacheEntry {
   data: unknown;
   expiresAt: number;
@@ -71,16 +69,13 @@ export interface ApiCacheOptions {
   enabled?: boolean | null;
 }
 
+/** On-disk shape of the cache file; `version` gates forward/backward compatibility. */
 interface CacheFileData {
   version: 1;
   entries: Record<string, CacheEntry>;
 }
 
 const CACHE_FILE_VERSION = 1;
-
-// =============================================================================
-// ApiCache
-// =============================================================================
 
 /** Estimate byte size of a value (rough JSON serialization length). */
 function estimateBytes(data: unknown): number {
@@ -100,6 +95,11 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+/**
+ * Validate a decoded JSON value against the {@link CacheEntry} shape.
+ * The cache file is user-editable and may be stale from an older version, so every
+ * entry is checked before trust; `data` is intentionally unconstrained.
+ */
 function isCacheEntry(value: unknown): value is CacheEntry {
   return (
     isRecord(value) &&
@@ -110,6 +110,11 @@ function isCacheEntry(value: unknown): value is CacheEntry {
   );
 }
 
+/**
+ * Parse and validate the raw cache file contents into a map of entries.
+ * Throws on any unexpected shape so the caller can discard a corrupt file rather
+ * than serving malformed entries; an empty file is treated as an empty cache.
+ */
 function parseCacheFile(raw: string): Map<string, CacheEntry> {
   if (raw.trim() === '') return new Map();
 
@@ -128,6 +133,11 @@ function parseCacheFile(raw: string): Map<string, CacheEntry> {
   return entries;
 }
 
+/**
+ * Two-layer (memory + optional disk) response cache. Disk persistence is opt-in and
+ * best-effort: any disk failure is recorded in {@link CacheStats.errors} and degrades
+ * to memory-only rather than breaking requests.
+ */
 export class ApiCache {
   private memory = new Map<string, CacheEntry>();
   private _lastLookup: CacheLookupResult | null = null;

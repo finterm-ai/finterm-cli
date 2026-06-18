@@ -35,25 +35,24 @@ export async function writeFile(
   content: string | Buffer,
   options?: { mode?: number }
 ): Promise<void> {
-  // Ensure parent directory exists
   await mkdir(dirname(path), { recursive: true });
-  // Write atomically. A `mode` (e.g. 0o600 for secret files like the credentials
-  // token) is applied to the written file; without it the file lands at the process
-  // umask (often world-readable 0644).
+  // A `mode` (e.g. 0o600 for secret files like the credentials token) is applied
+  // to the written file; without it the file lands at the process umask (often
+  // world-readable 0644).
   await atomicWriteFile(path, content, { encoding: 'utf-8', ...options });
 }
 
 /**
- * Synchronously and atomically write a file, creating parent directories as needed.
+ * Synchronously and atomically write a file.
  *
- * Note: Prefer the async version when possible. Sync version has shorter
- * retry timeout (1000ms vs 7500ms).
+ * Prefer the async {@link writeFile} when possible: it creates parent directories
+ * and retries transient errors for longer.
  *
  * @param path - The file path to write to
  * @param content - The content to write (string or Buffer)
  */
 export function writeFileSync(path: string, content: string | Buffer): void {
-  // Note: atomically doesn't create dirs synchronously, so we still need mkdir
-  // But since this is sync, we'll accept the limitation
+  // Unlike the async path, this does not create missing parent directories:
+  // `atomically` has no synchronous mkdir, so callers must ensure the dir exists.
   atomicWriteFileSync(path, content, 'utf-8');
 }

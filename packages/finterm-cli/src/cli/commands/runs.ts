@@ -9,6 +9,7 @@ import { CLIError } from '../lib/errors.js';
 import { listRunLedger, type RunLedgerEntry } from '../lib/bundle-runs.js';
 
 interface RunsListOptions {
+  /** Raw `--limit` value; Commander passes options as strings, parsed downstream. */
   limit?: string;
 }
 
@@ -21,6 +22,10 @@ const MIN_RUN_LIST_LIMIT = 1;
 /** Run count that indicates there is nothing to render from the local ledger. */
 const EMPTY_RUN_COUNT = 0;
 
+/**
+ * Parse the optional `--limit` flag, rejecting non-positive or non-integer input up front
+ * so a bad value fails with a clear message instead of silently truncating the listing.
+ */
 function parseOptionalLimit(value: string | undefined): number | undefined {
   if (value === undefined) {
     return undefined;
@@ -32,6 +37,7 @@ function parseOptionalLimit(value: string | undefined): number | undefined {
   return limit;
 }
 
+/** Lists recorded local bundle runs; emits JSON or a human-readable ledger view. */
 class RunsHandler extends BaseCommand {
   async run(options: RunsListOptions): Promise<void> {
     const limit = parseOptionalLimit(options.limit);
@@ -49,6 +55,7 @@ class RunsHandler extends BaseCommand {
   }
 }
 
+/** One-line summary of a ledger entry for the text view, tolerant of missing fields. */
 function formatRunLine(run: RunLedgerEntry): string {
   const state = run.state ?? run.status ?? 'unknown';
   const bundle = run.bundleName ?? 'unknown-bundle';

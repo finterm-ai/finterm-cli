@@ -18,33 +18,29 @@ import { BaseCommand } from '../lib/base-command.js';
 import { isExpectedFsError } from '../lib/errors.js';
 
 /**
- * Get the dist directory path based on the binary location.
- * Works for both bundled binary (dist/bin.mjs) and development (tsx).
+ * Resolve the bundled `dist` directory from the running binary's location, falling back
+ * to the in-repo path so the command works both when installed and when run from source.
  */
 function getDistDir(): string {
-  // process.argv[1] is the script being executed
-  // For bundled: /path/to/dist/bin.mjs or /path/to/dist/bin-bootstrap.cjs
-  // For dev: /path/to/node_modules/.pnpm/tsx@.../bin.ts
   const scriptPath = process.argv[1] || '';
   const scriptDir = dirname(scriptPath);
 
-  // If running from dist/, use that directory
   if (scriptDir.endsWith('/dist') || scriptDir.endsWith('\\dist')) {
     return scriptDir;
   }
 
-  // If running via tsx or other, try to find dist relative to cwd
   return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
 }
 
 /**
- * Load the SKILL.md content from the bundled docs.
+ * Load `SKILL.md`, trying the installed copy then source-tree fallbacks, and returning a
+ * minimal placeholder rather than failing if none is found (so `finterm skill` always
+ * produces usable output). Non-"file not found" errors still propagate.
  */
 function loadSkillContent(): string {
   const distDir = getDistDir();
   const paths = [
     join(distDir, 'docs', 'SKILL.md'),
-    // Development fallback paths
     join(process.cwd(), 'packages', 'finterm-cli', 'src', 'docs', 'SKILL.md'),
     join(process.cwd(), 'src', 'docs', 'SKILL.md'),
   ];
@@ -53,7 +49,6 @@ function loadSkillContent(): string {
     try {
       return readFileSync(skillPath, 'utf-8');
     } catch (error) {
-      // Only continue to next path for expected errors (file not found)
       if (!isExpectedFsError(error)) {
         throw error;
       }
@@ -68,13 +63,13 @@ Run \`finterm docs\` for full documentation.
 }
 
 /**
- * Load the skill-brief.md content from the bundled docs.
+ * Load `skill-brief.md` (the condensed workflow rules) with the same install/source
+ * fallback and placeholder behavior as {@link loadSkillContent}.
  */
 function loadSkillBriefContent(): string {
   const distDir = getDistDir();
   const paths = [
     join(distDir, 'docs', 'skill-brief.md'),
-    // Development fallback paths
     join(process.cwd(), 'packages', 'finterm-cli', 'src', 'docs', 'skill-brief.md'),
     join(process.cwd(), 'src', 'docs', 'skill-brief.md'),
   ];
@@ -83,7 +78,6 @@ function loadSkillBriefContent(): string {
     try {
       return readFileSync(briefPath, 'utf-8');
     } catch (error) {
-      // Only continue to next path for expected errors (file not found)
       if (!isExpectedFsError(error)) {
         throw error;
       }
@@ -110,7 +104,7 @@ class SkillHandler extends BaseCommand {
         content,
       },
       () => {
-        // Output raw content for text mode (useful for piping)
+        // Plain Markdown (no JSON envelope) so the output pipes cleanly into a file or pager.
         console.log(content.trim());
       }
     );

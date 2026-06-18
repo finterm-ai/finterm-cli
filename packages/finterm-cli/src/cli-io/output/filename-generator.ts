@@ -10,27 +10,15 @@
 
 import slugifyLib from 'slugify';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 /** Default maximum filename length (excluding path) */
 export const DEFAULT_MAX_LENGTH = 128;
 
 /** Characters to remove during slugification */
 const REMOVE_REGEX = /[*+~.()'"!:@#$%^&=]/g;
 
-// =============================================================================
-// Slugification
-// =============================================================================
-
 /**
- * Convert a string to a filesystem-safe slug.
- *
- * - Converts to lowercase
- * - Replaces spaces with hyphens
- * - Removes special characters
- * - Handles unicode (converts to ASCII equivalents)
+ * Convert a string to a filesystem-safe slug: lowercased, spaces to hyphens,
+ * special characters removed, and unicode folded to ASCII.
  */
 export function slugify(text: string): string {
   if (!text) return '';
@@ -42,43 +30,31 @@ export function slugify(text: string): string {
   });
 }
 
-// =============================================================================
-// Truncation
-// =============================================================================
-
 /**
- * Truncate a string to a maximum length.
- *
- * Preserves the end of the string if it contains an extension.
+ * Truncate a string to a maximum length, preserving any trailing extension so
+ * the result stays a usable filename rather than losing its suffix.
  */
 export function truncateToLength(text: string, maxLength: number = DEFAULT_MAX_LENGTH): string {
   if (text.length <= maxLength) {
     return text;
   }
 
-  // Find extension if present
   const extMatch = /\.[a-zA-Z0-9]+$/.exec(text);
   const extension = extMatch ? extMatch[0] : '';
   const extLength = extension.length;
 
-  // Calculate available length for name
   const availableLength = maxLength - extLength;
   if (availableLength <= 0) {
     return text.slice(0, maxLength);
   }
 
-  // Truncate name portion and reattach extension
   const namePortion = text.slice(0, text.length - extLength);
   return namePortion.slice(0, availableLength) + extension;
 }
 
-// =============================================================================
-// Timestamp Generation
-// =============================================================================
-
 /**
- * Generate a timestamp string for filenames.
- * Format: YYYYMMDD-HHMMSS
+ * Generate a UTC timestamp string for filenames in `YYYYMMDD-HHMMSS` form, so
+ * names sort chronologically and stay consistent across time zones.
  */
 function generateTimestamp(): string {
   const now = new Date();
@@ -93,16 +69,14 @@ function generateTimestamp(): string {
 }
 
 /**
- * Generate a short random suffix for uniqueness.
+ * Generate a short random suffix to disambiguate files created within the same
+ * second, where the timestamp alone would collide.
  */
 function generateRandomSuffix(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
-// =============================================================================
-// Filename Generation
-// =============================================================================
-
+/** Options controlling generated filenames */
 export interface FilenameOptions {
   /** Maximum total length of filename (default: 128) */
   maxLength?: number;
@@ -111,14 +85,8 @@ export interface FilenameOptions {
 }
 
 /**
- * Generate a filename with timestamp and slugified name.
- *
- * Format: [prefix-]YYYYMMDD-HHMMSS-name.ext
- *
- * @param name - The base name to include
- * @param extension - File extension (default: 'json')
- * @param options - Generation options
- * @returns Generated filename
+ * Generate a filename of the form `[prefix-]YYYYMMDD-HHMMSS-name.ext`, slugifying
+ * the name (and prefix) and truncating to fit `maxLength`.
  */
 export function generateFilename(
   name: string,
@@ -127,13 +95,9 @@ export function generateFilename(
 ): string {
   const { maxLength = DEFAULT_MAX_LENGTH, prefix } = options;
 
-  // Generate timestamp
   const timestamp = generateTimestamp();
-
-  // Slugify and clean the name
   const sluggedName = slugify(name) || 'output';
 
-  // Build filename parts
   const parts: string[] = [];
   if (prefix) {
     parts.push(slugify(prefix));
@@ -141,25 +105,16 @@ export function generateFilename(
   parts.push(timestamp);
   parts.push(sluggedName);
 
-  // Join with hyphens and add extension
   const baseName = parts.join('-');
   const fullName = `${baseName}.${extension}`;
 
-  // Truncate if necessary
   return truncateToLength(fullName, maxLength);
 }
 
 /**
- * Generate a unique filename with random suffix.
- *
- * Format: YYYYMMDD-HHMMSS-name-suffix.ext
- *
- * Use this when multiple files might be generated in quick succession.
- *
- * @param name - The base name to include
- * @param extension - File extension (default: 'json')
- * @param options - Generation options
- * @returns Generated unique filename
+ * Like {@link generateFilename} but appends a random suffix
+ * (`YYYYMMDD-HHMMSS-name-suffix.ext`) to avoid collisions when many files are
+ * created within the same second.
  */
 export function generateUniqueFilename(
   name: string,
@@ -168,14 +123,10 @@ export function generateUniqueFilename(
 ): string {
   const { maxLength = DEFAULT_MAX_LENGTH, prefix } = options;
 
-  // Generate timestamp and random suffix
   const timestamp = generateTimestamp();
   const suffix = generateRandomSuffix();
-
-  // Slugify and clean the name
   const sluggedName = slugify(name) || 'output';
 
-  // Build filename parts
   const parts: string[] = [];
   if (prefix) {
     parts.push(slugify(prefix));
@@ -184,10 +135,8 @@ export function generateUniqueFilename(
   parts.push(sluggedName);
   parts.push(suffix);
 
-  // Join with hyphens and add extension
   const baseName = parts.join('-');
   const fullName = `${baseName}.${extension}`;
 
-  // Truncate if necessary
   return truncateToLength(fullName, maxLength);
 }

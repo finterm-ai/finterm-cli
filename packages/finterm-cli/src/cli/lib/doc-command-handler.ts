@@ -196,9 +196,9 @@ export abstract class DocCommandHandler extends BaseCommand {
     }
 
     const best = matches[0]!;
-    // Use PREFIX_MATCH (0.9) as threshold for high confidence
+    // Require at least prefix-match confidence before auto-printing a single doc;
+    // weaker matches fall through to a "did you mean" suggestion list.
     if (best.score < SCORE_PREFIX_MATCH) {
-      // Low confidence - show suggestions instead
       console.log(`No exact match for "${query}". Did you mean:`);
       for (const m of matches) {
         const name = m.doc.frontmatter?.title ?? m.doc.name;

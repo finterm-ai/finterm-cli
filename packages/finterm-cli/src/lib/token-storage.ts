@@ -15,19 +15,11 @@ import { join, dirname } from 'path';
 
 import { writeFile } from '../cli/lib/fs.js';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 /** Credentials file name */
 export const CREDENTIALS_FILENAME = 'credentials.json';
 
 /** Environment variable for token override */
 export const TOKEN_ENV_VAR = 'FINTERM_API_KEY';
-
-// =============================================================================
-// Token Storage Interface
-// =============================================================================
 
 /**
  * Interface for token storage implementations.
@@ -49,12 +41,14 @@ export interface TokenStorage {
   hasToken(): Promise<boolean>;
 }
 
+/** Where a token came from, so status output can explain precedence to the user. */
 export type TokenSource = 'env' | 'file';
 
 export interface TokenMetadata {
   tokenId?: string;
 }
 
+/** Token plus provenance, surfaced by `finterm auth status`. */
 export interface TokenInfo {
   token: string | null;
   tokenId: string | null;
@@ -62,20 +56,16 @@ export interface TokenInfo {
   storedAt: number | null;
 }
 
-// =============================================================================
-// Credentials File Structure
-// =============================================================================
-
+/**
+ * On-disk credentials shape. The index signature preserves unknown fields written by
+ * other/newer CLI versions so a round-trip read-modify-write never drops them.
+ */
 interface CredentialsFile {
   token?: string;
   tokenId?: string;
   storedAt?: number;
   [key: string]: unknown;
 }
-
-// =============================================================================
-// File-Based Token Storage
-// =============================================================================
 
 /**
  * File-based token storage implementation.
@@ -165,10 +155,6 @@ export class FileTokenStorage implements TokenStorage {
   }
 }
 
-// =============================================================================
-// Environment Variable Token Storage
-// =============================================================================
-
 /**
  * Token storage that wraps another storage and checks env var first.
  */
@@ -176,12 +162,11 @@ class EnvAwareTokenStorage implements TokenStorage {
   constructor(private readonly fallback: TokenStorage) {}
 
   async getToken(): Promise<string | null> {
-    // Check environment variable first
+    // The env var wins so CI and scripts can override stored credentials.
     const envToken = process.env[TOKEN_ENV_VAR];
     if (envToken) {
       return envToken;
     }
-    // Fall back to underlying storage
     return this.fallback.getToken();
   }
 
@@ -208,10 +193,6 @@ class EnvAwareTokenStorage implements TokenStorage {
     return token !== null;
   }
 }
-
-// =============================================================================
-// Factory Function
-// =============================================================================
 
 /**
  * Create a token storage instance.

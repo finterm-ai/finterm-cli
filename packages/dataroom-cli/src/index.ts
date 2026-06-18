@@ -1,8 +1,8 @@
 /**
- * Database-free DR/0.3 profile:file Dataroom command tree shared by the finterm CLI.
+ * Dataroom command tree (read and search a local DR/0.3 profile:file room).
  *
- * This package keeps the CLI surface separate from the `dataroom` core package so the
- * read and search commands can be reused without pulling in the core implementation.
+ * Lives in its own package, separate from the `dataroom` core, so the read and search
+ * commands can be embedded in other CLIs without depending on the room-building internals.
  */
 
 import { Command, InvalidArgumentError } from 'commander';
@@ -18,6 +18,7 @@ import {
   type FileProfileFile,
 } from 'dataroom';
 
+/** Options common to every dataroom subcommand; `--json` is also resolvable from parents. */
 interface CommandOptions {
   json?: boolean;
 }
@@ -41,8 +42,15 @@ interface SearchOptions extends CommandOptions {
 type InfoOptions = CommandOptions;
 
 const DEFAULT_READ_MAX_BYTES = DEFAULTS.AGENT_READ_MAX_BYTES;
+/** Cap on search matches when `--limit` is omitted, to keep default output readable. */
 const DEFAULT_SEARCH_LIMIT = 20;
 
+/**
+ * Build the `dataroom` command and its subcommands for mounting in a host CLI.
+ *
+ * `list` is an alias of `files`: both list file artifacts, kept distinct so users can
+ * reach for whichever verb they expect.
+ */
 export function buildDataroomCommand(): Command {
   const command = new Command('dataroom').description(
     'Read and search a downloaded local Dataroom (DR/0.3 profile:file room)'
@@ -108,6 +116,7 @@ export function buildDataroomCommand(): Command {
   return command;
 }
 
+/** Backs both `files` and `list`: list artifacts after applying prefix, facet, and limit filters. */
 async function filesAction(
   roomPath: string,
   options: FilesOptions,
@@ -131,6 +140,10 @@ async function filesAction(
   }
 }
 
+/**
+ * Read one artifact. Text mode streams the raw content; JSON mode reports a `missReason`
+ * so callers can distinguish binary artifacts from reads truncated by the byte limit.
+ */
 async function readAction(
   roomPath: string,
   ref: string,
@@ -220,6 +233,10 @@ async function infoAction(roomPath: string, options: InfoOptions, command: Comma
   console.log(`  Files: ${files.length} (${fileSize} bytes)`);
 }
 
+/**
+ * Resolve `--json` from the subcommand or any ancestor, so the flag works whether it is
+ * passed on the leaf command or higher up (e.g. on the `dataroom` group).
+ */
 function shouldOutputJson(command: Command, options: CommandOptions): boolean {
   if (options.json === true) {
     return true;
@@ -239,6 +256,10 @@ function outputJson(data: unknown): void {
   console.log(JSON.stringify(data, null, 2));
 }
 
+/**
+ * Parse a count-style option, throwing a Commander usage error on bad input. The fallback
+ * stands in for an omitted flag (e.g. `Number.POSITIVE_INFINITY` to mean "no limit").
+ */
 function parsePositiveInteger(
   optionName: string,
   value: string | undefined,
@@ -254,6 +275,7 @@ function parsePositiveInteger(
   return parsed;
 }
 
+/** Like {@link parsePositiveInteger} but allows zero, for byte-size limits where 0 is valid. */
 function parseNonNegativeInteger(
   optionName: string,
   value: string | undefined,
@@ -269,14 +291,23 @@ function parseNonNegativeInteger(
   return parsed;
 }
 
+/**
+ * Accept either a bare path prefix or one written with the room's `files/` or `file:`
+ * addressing prefix, normalizing to the bare form filtering expects.
+ */
 function normalizePathPrefix(prefix: string | undefined): string | undefined {
   return prefix?.replace(/^files\//, '').replace(/^file:/, '');
 }
 
+/** Commander accumulator: lets `--facet` be repeated, collecting each into a list. */
 function collectFacet(value: string, previous: FacetFilter[]): FacetFilter[] {
   return [...previous, parseFacet(value)];
 }
 
+/**
+ * Parse a `key=value` facet filter. Splits on the first `=` only, so values may themselves
+ * contain `=`; an empty or missing key is rejected as a usage error.
+ */
 function parseFacet(value: string): FacetFilter {
   const equalsIndex = value.indexOf('=');
   if (equalsIndex <= 0) {
@@ -288,6 +319,11 @@ function parseFacet(value: string): FacetFilter {
   };
 }
 
+/**
+ * Coerce a facet value string into a typed value so CLI filters match stored metadata:
+ * the literals `true`/`false`/`null` and finite numbers become their primitives, and
+ * anything else stays a string.
+ */
 function parseFacetValue(value: string): FacetValue {
   if (value === 'true') {
     return true;
@@ -305,6 +341,7 @@ function parseFacetValue(value: string): FacetValue {
   return value;
 }
 
+/** Project a file to its public shape, dropping the local `absolutePath` from output. */
 function projectFile(file: FileProfileFile): Omit<FileProfileFile, 'absolutePath'> {
   return {
     roomId: file.roomId,

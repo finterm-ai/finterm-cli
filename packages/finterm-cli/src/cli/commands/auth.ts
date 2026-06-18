@@ -15,27 +15,38 @@ import { getFintermDir, ensureFintermDirs, getApiUrl } from '../../cli-io/settin
 import { createTokenStorage, TOKEN_ENV_VAR } from '../../lib/token-storage.js';
 import { createAPIClient, type FintermAPIClient } from '../../lib/api-client.js';
 
-/** Poll interval in milliseconds */
+/** Delay between successive login-status polls. */
 const POLL_INTERVAL_MS = 2000;
 
-/** Maximum poll duration in milliseconds (10 minutes) */
+/** Upper bound on total polling time before giving up on a pending login. */
 const MAX_POLL_DURATION_MS = 10 * 60 * 1000;
 
+/** Fallback login-session lifetime used when the server does not return an expiry. */
+const DEFAULT_SESSION_EXPIRY_MS = 15 * 60 * 1000;
+
+/** Token plus its server-side identifier, returned once a login is authorized. */
 interface LoginTokenResult {
   token: string;
   tokenId?: string;
 }
 
+/** Normalized login options after coercing raw Commander values to concrete types. */
 interface AuthLoginOptions {
   browser: boolean;
   deviceName: string | null;
 }
 
+/**
+ * Raw login options as Commander hands them over, before validation/coercion.
+ * Values are `unknown` because the negated `--no-browser` flag and the optional
+ * `--device-name` may be absent or of the wrong type.
+ */
 interface RawAuthLoginOptions {
   browser: unknown;
   deviceName: unknown;
 }
 
+/** Show only the head and tail of a token so it can be displayed without leaking it. */
 function maskToken(token: string): string {
   return `${token.substring(0, 12)}...${token.substring(token.length - 4)}`;
 }
@@ -47,10 +58,10 @@ function normalizeLoginOptions(options: RawAuthLoginOptions): AuthLoginOptions {
   };
 }
 
-// =============================================================================
-// Auth Login Handler
-// =============================================================================
-
+/**
+ * Drives the browser-based login flow: starts a session, opens the login URL,
+ * then polls until the user authorizes and a token can be stored locally.
+ */
 class AuthLoginHandler extends BaseCommand {
   private apiClient: FintermAPIClient;
   private command: Command;
@@ -67,10 +78,8 @@ class AuthLoginHandler extends BaseCommand {
   async run(options: AuthLoginOptions): Promise<void> {
     const { browser, deviceName } = options;
 
-    // Ensure directories exist
     await ensureFintermDirs();
 
-    // Check if already logged in
     const fintermDir = getFintermDir();
     const tokenStorage = createTokenStorage(fintermDir);
     const existingToken = await tokenStorage.getToken();
@@ -89,7 +98,6 @@ class AuthLoginHandler extends BaseCommand {
       this.output.notice('Signing in creates a new API key and revokes any previous active key.');
     }
 
-    // Start login flow
     this.output.info('Starting login flow...');
 
     const startResponse = await this.execute(
@@ -109,10 +117,8 @@ class AuthLoginHandler extends BaseCommand {
 
     const { sessionId, pollSecret, loginUrl, expiresAt } = startResponse;
 
-    // Default expiry to 15 minutes if not provided
-    const sessionExpiry = expiresAt ?? Date.now() + 15 * 60 * 1000;
+    const sessionExpiry = expiresAt ?? Date.now() + DEFAULT_SESSION_EXPIRY_MS;
 
-    // Show login instructions
     this.output.data(
       {
         sessionId,
@@ -130,7 +136,6 @@ class AuthLoginHandler extends BaseCommand {
       }
     );
 
-    // Open browser unless --no-browser was passed
     if (browser) {
       this.output.info('Opening browser...');
       try {
@@ -139,8 +144,8 @@ class AuthLoginHandler extends BaseCommand {
         await open(loginUrl);
         this.output.notice('Browser opened. Waiting for authentication...');
       } catch (error) {
-        // Browser open can fail for various reasons (no default browser, permissions, etc.)
-        // This is expected in headless/CI environments - provide helpful fallback message
+        // Browser open is expected to fail in headless/CI environments; fall back to
+        // asking the user to open the URL manually rather than aborting the login.
         const reason = error instanceof Error ? error.message : String(error);
         this.output.notice(
           `Could not open browser automatically (${reason}). Please open the URL manually.`
@@ -150,14 +155,12 @@ class AuthLoginHandler extends BaseCommand {
       this.output.notice('Waiting for authentication...');
     }
 
-    // Poll for completion
     const tokenResult = await this.pollForToken(sessionId, pollSecret, sessionExpiry);
 
     if (!tokenResult) {
       throw new CLIError('Login timed out or was denied. Please try again.');
     }
 
-    // Save token
     await tokenStorage.setToken(tokenResult.token, { tokenId: tokenResult.tokenId });
 
     this.output.data(
@@ -193,7 +196,6 @@ class AuthLoginHandler extends BaseCommand {
 
     try {
       while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
-        // Check if session expired
         if (Date.now() > expiresAt) {
           spinner.stop();
           return null;
@@ -203,7 +205,6 @@ class AuthLoginHandler extends BaseCommand {
           const response = await this.apiClient.loginPoll(sessionId, pollSecret);
 
           if (!response.success) {
-            // Error polling - wait and retry
             await this.sleep(POLL_INTERVAL_MS);
             continue;
           }
@@ -214,7 +215,8 @@ class AuthLoginHandler extends BaseCommand {
                 spinner.stop();
                 return { token: response.token, tokenId: response.tokenId };
               }
-              // Token already retrieved or missing - session is done (ar-agfi fix)
+              // Authorized but the token was already consumed by another retrieval;
+              // the session is spent, so stop rather than poll forever.
               spinner.stop();
               this.output.warn('Session authorized but token was already retrieved.');
               return null;
@@ -230,16 +232,16 @@ class AuthLoginHandler extends BaseCommand {
               return null;
 
             case 'pending':
-              // Still waiting - spinner handles progress indication
               break;
 
             default:
-              // Unexpected status - log and keep polling (ar-agfi fix)
+              // Tolerate unknown statuses from a newer server by logging and continuing.
               this.output.info(`Unexpected poll status: ${response.status}`);
               break;
           }
         } catch (error) {
-          // Network error - wait and retry
+          // A single failed poll is usually transient (network blip); keep retrying
+          // until the overall timeout is reached.
           this.output.info(`Poll error: ${error instanceof Error ? error.message : String(error)}`);
         }
 
@@ -250,7 +252,6 @@ class AuthLoginHandler extends BaseCommand {
       this.output.warn('Login timed out. Please try again.');
       return null;
     } finally {
-      // Ensure spinner is always stopped
       spinner.stop();
     }
   }
@@ -259,16 +260,17 @@ class AuthLoginHandler extends BaseCommand {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  /**
+   * Whether the user explicitly opted out of interactive prompts. The browser login
+   * flow is impossible without interaction, so this gates a clear up-front error.
+   */
   private isExplicitlyNonInteractive(): boolean {
     const options = this.command.optsWithGlobals();
     return options.nonInteractive === true;
   }
 }
 
-// =============================================================================
-// Auth Status Handler
-// =============================================================================
-
+/** Reports whether a token is stored and where it came from, masking the token value. */
 class AuthStatusHandler extends BaseCommand {
   async run(): Promise<void> {
     const fintermDir = getFintermDir();
@@ -310,10 +312,7 @@ class AuthStatusHandler extends BaseCommand {
   }
 }
 
-// =============================================================================
-// Auth Logout Handler
-// =============================================================================
-
+/** Clears the stored authentication token, treating "not logged in" as a no-op success. */
 class AuthLogoutHandler extends BaseCommand {
   async run(): Promise<void> {
     const fintermDir = getFintermDir();
@@ -345,10 +344,6 @@ class AuthLogoutHandler extends BaseCommand {
     );
   }
 }
-
-// =============================================================================
-// Command Definition
-// =============================================================================
 
 const loginCommand = new Command('login')
   .description('Authenticate with the Finterm platform before running company research bundles')

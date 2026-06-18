@@ -98,7 +98,6 @@ const DEFAULT_OPTIONS: Required<NormalizeUrlOptions> = {
 export function normalizeUrl(url: string, options: NormalizeUrlOptions = {}): string {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  // Parse URL
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -106,16 +105,13 @@ export function normalizeUrl(url: string, options: NormalizeUrlOptions = {}): st
     throw new Error(`Invalid URL: ${url}`);
   }
 
-  // Only allow http/https for web content
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error(`Unsupported protocol: ${parsed.protocol}. Only http and https are supported.`);
   }
 
-  // 1. Lowercase scheme (already handled by URL parser)
-  // 2. Lowercase host
   const host = parsed.hostname.toLowerCase();
 
-  // 3. Remove default ports
+  // Drop the port when it is the protocol default so equivalent URLs collapse.
   let port = parsed.port;
   if (
     (parsed.protocol === 'https:' && port === '443') ||
@@ -124,32 +120,26 @@ export function normalizeUrl(url: string, options: NormalizeUrlOptions = {}): st
     port = '';
   }
 
-  // 4. Normalize path - remove trailing slash (except for root)
+  // Trailing slashes are insignificant except on the root path.
   let path = parsed.pathname;
   if (path.length > 1 && path.endsWith('/')) {
     path = path.slice(0, -1);
   }
 
-  // 5. Handle query parameters
   let search = '';
   if (parsed.searchParams.toString()) {
-    const params: Array<[string, string]> = [];
+    const params: [string, string][] = [];
 
     for (const [key, value] of parsed.searchParams) {
-      // Skip tracking parameters
       if (opts.removeTracking && TRACKING_PARAMS.has(key.toLowerCase())) {
         continue;
       }
-
-      // Skip custom strip params
       if (opts.stripParams.includes(key)) {
         continue;
       }
-
       params.push([key, value]);
     }
 
-    // Sort parameters if requested
     if (opts.sortParams) {
       params.sort((a, b) => a[0].localeCompare(b[0]));
     }
@@ -160,10 +150,8 @@ export function normalizeUrl(url: string, options: NormalizeUrlOptions = {}): st
     }
   }
 
-  // 6. Handle fragment
   const fragment = opts.removeFragment ? '' : parsed.hash;
 
-  // Reconstruct URL
   const portPart = port ? `:${port}` : '';
   return `${parsed.protocol}//${host}${portPart}${path}${search}${fragment}`;
 }

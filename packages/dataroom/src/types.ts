@@ -151,9 +151,9 @@ export interface RuntimeOptions {
   offline?: boolean;
   /**
    * Suppress the one-time stderr warning emitted when opening a room or
-   * library whose `format:` is older than the package's current
-   * Suppress adapter format warnings. The database-free core does not emit
-   * these warnings, but adapter packages may honor this option.
+   * library whose `format:` is older than the package's current version. The
+   * database-free core does not emit these warnings, but adapter packages may
+   * honor this option.
    */
   suppressFormatWarnings?: boolean;
 }
@@ -808,13 +808,13 @@ export interface BackfillDerivedRelationshipsResult {
   /** Number of relationships that already existed */
   existing: number;
   /** Derived files whose digest prefix matched no blob */
-  missing: Array<{ fileRef: ArtifactRef; digestPrefix: string }>;
+  missing: { fileRef: ArtifactRef; digestPrefix: string }[];
   /** Derived files whose digest prefix matched multiple blobs */
-  ambiguous: Array<{
+  ambiguous: {
     fileRef: ArtifactRef;
     digestPrefix: string;
     blobRefs: ArtifactRef[];
-  }>;
+  }[];
 }
 
 /**
@@ -857,7 +857,7 @@ export interface LibraryFindUrlArtifactsOptions {
 
 /**
  * One per-room miss record returned by
- * {@link LibraryUrlArtifactsResult.misses} (ar-b4pk). Lets the caller
+ * {@link LibraryUrlArtifactsResult.misses}. Lets the caller
  * distinguish "this room never saw this URL" from "this room has a stale
  * URL entry pointing at a missing blob", which is index drift the caller
  * may want to flag or repair.
@@ -872,7 +872,7 @@ export interface LibraryUrlArtifactMiss {
 }
 
 /**
- * Options for {@link DataRoom.removeBlob} (ar-hz8g).
+ * Options for {@link DataRoom.removeBlob}.
  *
  * Default behavior is unchanged: the blob and its index entry go away; URL
  * index entries pointing at the blob are left intact, so subsequent
@@ -900,13 +900,13 @@ export interface LibraryUrlArtifactsResult {
   /**
    * Structured miss reason when no rooms matched, rolled up by severity:
    * `blob_missing` or `blob_expired` outrank `url_not_cached` so the caller
-   * sees the most actionable diagnostic first (ar-b4pk).
+   * sees the most actionable diagnostic first.
    */
   missReason?: UrlArtifactMissReason;
   /** Room-qualified matches sorted by roomId */
   matches: LibraryUrlArtifactMatch[];
   /**
-   * Bounded list of per-room misses (ar-b4pk). Capped at
+   * Bounded list of per-room misses. Capped at
    * {@link LIBRARY_URL_MISSES_CAP} to keep payloads small in libraries with
    * many rooms; ordering preserves the same `roomId` sort as `matches`.
    */
@@ -1003,7 +1003,7 @@ export interface ResolvedBlob {
  */
 export interface SyncStatus {
   /** Files/blobs where stored digest doesn't match current content */
-  stale: Array<{ path: string; storedDigest: string; currentDigest: string }>;
+  stale: { path: string; storedDigest: string; currentDigest: string }[];
   /** Files on disk not tracked in index */
   orphans: string[];
   /** Index entries pointing to missing files */
@@ -1019,9 +1019,9 @@ export interface IndexIntegrityStatus {
   /** Blob files present on disk but absent from the blob index. */
   orphanBlobs: string[];
   /** URL mappings whose target blob index entry is missing. */
-  danglingUrlMappings: Array<{ url: string; blobKey: string }>;
+  danglingUrlMappings: { url: string; blobKey: string }[];
   /** Action mappings whose target blob index entry is missing. */
-  danglingActionMappings: Array<{ actionKey: string; blobKey: string }>;
+  danglingActionMappings: { actionKey: string; blobKey: string }[];
 }
 
 // =============================================================================

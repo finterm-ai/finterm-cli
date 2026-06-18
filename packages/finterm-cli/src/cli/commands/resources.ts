@@ -11,7 +11,8 @@ import { dirname, join } from 'node:path';
 import { DocCommandHandler, type DocCommandOptions } from '../lib/doc-command-handler.js';
 
 /**
- * Get the dist directory path based on the binary location.
+ * Resolve the bundled `dist` directory from the running binary's location, falling back
+ * to the in-repo path so the command works both when installed and when run from source.
  */
 function getDistDir(): string {
   const scriptPath = process.argv[1] || '';
@@ -24,9 +25,7 @@ function getDistDir(): string {
   return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
 }
 
-/**
- * Get search paths for resources (dist first, then dev fallbacks).
- */
+/** Primary (installed) resource search location, rooted at the bundled `dist` dir. */
 function getResourcePaths(): { paths: string[]; baseDir: string } {
   const distDir = getDistDir();
 
@@ -36,9 +35,7 @@ function getResourcePaths(): { paths: string[]; baseDir: string } {
   };
 }
 
-/**
- * Get development fallback paths for resources.
- */
+/** Source-tree fallback locations used when running before/without a build. */
 function getDevResourcePaths(): { paths: string[]; baseDir: string }[] {
   return [
     {
@@ -52,17 +49,18 @@ function getDevResourcePaths(): { paths: string[]; baseDir: string }[] {
   ];
 }
 
+/**
+ * Serves reference resources: factual lookup documents (market hours, symbol lists, and
+ * the like) shipped with the CLI for agents to consult. Earlier search paths shadow later
+ * ones, so the installed copy wins over source-tree fallbacks.
+ */
 class ResourcesHandler extends DocCommandHandler {
   constructor(command: Command) {
     const prodConfig = getResourcePaths();
     const devConfigs = getDevResourcePaths();
 
     const allPaths: string[] = [];
-
-    // Add production path
     allPaths.push(...prodConfig.paths.map((p) => join(prodConfig.baseDir, p)));
-
-    // Add dev fallback paths
     for (const devConfig of devConfigs) {
       allPaths.push(...devConfig.paths.map((p) => join(devConfig.baseDir, p)));
     }

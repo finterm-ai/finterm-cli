@@ -63,13 +63,16 @@ export function getConfigPath(cwd: string): string {
   return join(cwd, '.finterm', 'config.yml');
 }
 
+/**
+ * Writes the minimal `.finterm/config.yml` for a project. Re-running is safe: an existing
+ * config is reported as a no-op rather than overwritten.
+ */
 class InitHandler extends BaseCommand {
   async run(): Promise<void> {
     const cwd = process.cwd();
     const configPath = getConfigPath(cwd);
     const fintermDir = getFintermDir(cwd);
 
-    // Check if already initialized
     const existingConfig = await readFintermConfig(cwd);
     if (existingConfig) {
       const initDate = existingConfig.initialized_at
@@ -91,7 +94,6 @@ class InitHandler extends BaseCommand {
       return;
     }
 
-    // Check dry-run
     if (
       this.checkDryRun('Would initialize finterm in this directory', {
         configPath,
@@ -101,7 +103,6 @@ class InitHandler extends BaseCommand {
       return;
     }
 
-    // Create config
     const config: FintermConfig = {
       version: VERSION,
       initialized_at: new Date().toISOString(),
@@ -117,17 +118,14 @@ ${yaml.stringify(config)}
 #   auto_prime: true
 `;
 
-    // Create .gitignore for local-only files
     const gitignoreContent = `# Local-only files (not committed)
 *.local
 *.local.yml
 `;
 
-    // Write files
     await writeFile(configPath, configContent);
     await writeFile(join(fintermDir, '.gitignore'), gitignoreContent);
 
-    // Output result
     this.output.data(
       {
         initialized: true,
@@ -150,6 +148,7 @@ ${yaml.stringify(config)}
   }
 }
 
+/** Top-level `init` command that scaffolds project-local finterm configuration. */
 export const initCommand = new Command('init')
   .description('Initialize finterm in the current directory')
   .action(async (_options, command) => {

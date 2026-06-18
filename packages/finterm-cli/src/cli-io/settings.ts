@@ -10,9 +10,7 @@ import os from 'os';
 import { mkdir, chmod } from 'fs/promises';
 import { existsSync } from 'fs';
 
-// =============================================================================
-// Directory Settings
-// =============================================================================
+// Directory settings
 
 /** Default finterm home directory (like ~/.claude for Claude Code) */
 export const DEFAULT_FINTERM_DIR = '.finterm';
@@ -29,9 +27,7 @@ export const CONFIG_FILENAME = 'config.yaml';
 /** Local bundle run ledger filename */
 export const RUN_LEDGER_FILENAME = 'runs.json';
 
-// =============================================================================
-// Token Settings
-// =============================================================================
+// Token settings
 
 /** Prefix for CLI auth tokens */
 export const CLI_TOKEN_PREFIX = 'fint_auth_';
@@ -57,9 +53,7 @@ export const CLI_TOKEN_EXPIRATION_DAYS = 90;
 /** Token expiration in milliseconds */
 export const CLI_TOKEN_EXPIRATION_MS = CLI_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60 * 1000;
 
-// =============================================================================
-// Environment Variables
-// =============================================================================
+// Environment variables
 
 /** Environment variable to override finterm config directory */
 export const ENV_FINTERM_CONFIG = 'FINTERM_CONFIG';
@@ -73,9 +67,7 @@ export const ENV_FINTERM_MOCK_MODE = 'FINTERM_MOCK_MODE';
 /** Environment variable to override API URL */
 export const ENV_FINTERM_API_URL = 'FINTERM_API_URL';
 
-// =============================================================================
-// API Settings
-// =============================================================================
+// API settings
 
 /** Default API base URL for the Finterm backend (production) */
 export const DEFAULT_API_URL = 'https://api.finterm.ai';
@@ -87,9 +79,7 @@ export function getApiUrl(): string {
   return process.env[ENV_FINTERM_API_URL] ?? DEFAULT_API_URL;
 }
 
-// =============================================================================
-// Path Resolution Functions
-// =============================================================================
+// Path resolution
 
 /**
  * Get the finterm config directory.
@@ -123,9 +113,7 @@ export function getRunLedgerPath(): string {
   return path.join(getFintermDir(), RUN_LEDGER_FILENAME);
 }
 
-// =============================================================================
-// Directory Setup Functions
-// =============================================================================
+// Directory setup
 
 /**
  * Ensure the finterm directory structure exists.
@@ -151,17 +139,13 @@ export async function ensureFintermDirs(): Promise<boolean> {
   return true;
 }
 
-// =============================================================================
-// Mock Mode Functions
-// =============================================================================
+// Mock mode
 
 /**
- * Valid mock modes for finterm-cli.
+ * Mock modes for the CLI, selected via the mock-mode environment variable.
  * - live: No mocking, real API calls
  * - client: Client-side mocking with canned responses
  * - client_error: Client-side mocking that returns error responses
- *
- * Mock modes for the finterm CLI.
  */
 export type MockMode = 'live' | 'client' | 'client_error';
 

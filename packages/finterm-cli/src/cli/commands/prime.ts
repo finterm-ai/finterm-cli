@@ -15,27 +15,24 @@ import { getColorOptionFromArgv } from '../lib/output.js';
 import { renderMarkdown } from '../lib/markdown.js';
 
 /**
- * Get the dist directory path based on the binary location.
- * Works for both bundled binary (dist/bin.mjs) and development (tsx).
+ * Locate the bundled `dist/` directory from the running script's path, so content
+ * resolves both for the built binary and when running from source via tsx.
  */
 function getDistDir(): string {
-  // process.argv[1] is the script being executed
-  // For bundled: /path/to/dist/bin.mjs or /path/to/dist/bin-bootstrap.cjs
-  // For dev: /path/to/node_modules/.pnpm/tsx@.../bin.ts
   const scriptPath = process.argv[1] || '';
   const scriptDir = dirname(scriptPath);
 
-  // If running from dist/, use that directory
   if (scriptDir.endsWith('/dist') || scriptDir.endsWith('\\dist')) {
     return scriptDir;
   }
 
-  // If running via tsx or other, try to find dist relative to cwd
+  // Running via tsx (or similar): resolve dist relative to the working directory.
   return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
 }
 
 /**
- * Load prime (quick context) content from bundled file.
+ * Load the quick-context file, trying the built location first and source paths as a dev
+ * fallback. Returns minimal inline guidance if none is found, so `prime` never fails.
  */
 export function loadPrimeContent(): string {
   const distDir = getDistDir();
@@ -66,7 +63,8 @@ Run \`finterm docs\` for full documentation.
 }
 
 /**
- * Load skill file content.
+ * Load the bundled skill file, trying the built location first and source paths as a dev
+ * fallback. Unlike the context loaders, a missing skill file is a hard error.
  */
 export function loadSkillContent(): string {
   const distDir = getDistDir();
@@ -91,6 +89,10 @@ export function loadSkillContent(): string {
   throw new Error('SKILL.md not found');
 }
 
+/**
+ * Prints the quick-context file: rendered markdown to stdout for humans, or raw content
+ * in JSON mode so agent hooks can capture it programmatically.
+ */
 class PrimeHandler extends BaseCommand {
   async run(): Promise<void> {
     const content = loadPrimeContent();
@@ -105,6 +107,7 @@ class PrimeHandler extends BaseCommand {
   }
 }
 
+/** Top-level `prime` command that emits quick session context for AI agents. */
 export const primeCommand = new Command('prime')
   .description('Show quick context for AI agents')
   .action(async (_options, command) => {
