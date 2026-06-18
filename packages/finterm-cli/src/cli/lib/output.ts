@@ -1,7 +1,5 @@
 /**
  * OutputManager for dual-mode output (text + JSON).
- *
- * See: research-modern-typescript-cli-patterns.md#4-dual-output-mode-text--json
  */
 
 import pc from 'picocolors';

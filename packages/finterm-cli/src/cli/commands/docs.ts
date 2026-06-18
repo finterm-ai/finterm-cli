@@ -53,7 +53,7 @@ export function loadDocsContent(): string {
   return `# Finterm CLI
 
 Run \`finterm --help\` for available commands.
-Run \`finterm setup claude\` to install Claude Code integration.
+Run \`finterm setup\` to install agent integration files.
 `;
 }
 

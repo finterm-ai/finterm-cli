@@ -1,7 +1,5 @@
 /**
  * Command context and global option handling.
- *
- * See: research-modern-typescript-cli-patterns.md#9-global-options
  */
 
 import type { Command } from 'commander';

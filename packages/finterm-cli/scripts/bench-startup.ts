@@ -4,8 +4,7 @@
  * p50 wall-clock time exceeds the threshold.
  *
  * Default threshold is 200ms (CI machines are slower than dev laptops; the
- * local target is 150ms). Override with BENCH_STARTUP_MAX_MS. See
- * plan-2026-06-12-finterm-cli-performance-and-quality.md (P2a).
+ * local target is 150ms). Override with BENCH_STARTUP_MAX_MS.
  */
 
 import { spawnSync } from 'node:child_process';

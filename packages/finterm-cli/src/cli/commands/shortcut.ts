@@ -2,7 +2,6 @@
  * `finterm shortcut` - Find and output agent shortcuts.
  *
  * Shortcuts are reusable instruction templates for common workflows.
- * Follows the CLI-as-Agent-Skill pattern from tbd.
  */
 
 import { Command } from 'commander';

@@ -113,12 +113,13 @@ Preview tools are not part of the stable first-release CLI surface.
 ### Developer Tools
 
 ```bash
+finterm init               # Initialize finterm in the current directory
 finterm prime              # Load agent context
 finterm docs               # View CLI documentation
 finterm skill              # Print the full agent skill
 finterm shortcut --list    # List agent shortcuts
 finterm resources --list   # List reference resources
-finterm setup       # Install supported agent integration files
+finterm setup              # Install supported agent integration files
 finterm setup --check      # Verify the skill and setup state
 ```
 
@@ -137,22 +138,23 @@ pnpm install
 # Build
 pnpm build
 
-# Run locally
-node dist/bin-bootstrap.cjs
+# Run locally (builds the CLI package and runs the bundled binary)
+pnpm finterm:bin
 ```
 
 ### Running Tests
 
 ```bash
-pnpm test              # Run all tests
-pnpm test:install      # Smoke-test local preview install
-pnpm test:watch        # Watch mode
-pnpm test:pack         # Smoke-test the packed npm artifact
+pnpm test                       # Run all tests
+pnpm test:install               # Smoke-test local preview install
+pnpm test:uninstall             # Remove the local preview install
+pnpm --filter finterm test:pack # Smoke-test the packed npm artifact
 ```
 
 ## Contributing
 
-We welcome contributions!
+Contributions are welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started.
 
 ## License
 

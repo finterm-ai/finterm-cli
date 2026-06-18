@@ -4,10 +4,10 @@
  * into a temporary prefix, exactly as an end user's `npm install -g finterm` would.
  *
  * Unlike local-install-smoke.ts (npm link, which never resolves the dependency
- * manifest), a tarball install fails loudly on unpublishable dependencies
- * (private `workspace:^` packages) and on bundle leaks that import packages
+ * manifest), a tarball install fails loudly on any dependency that cannot be
+ * resolved from the published manifest, and on bundle leaks that import packages
  * missing from the manifest. This is the red/green gate for npm publish
- * readiness. See plan-2026-06-12-finterm-cli-performance-and-quality.md (P1a).
+ * readiness.
  */
 
 import { spawnSync, type SpawnSyncOptions } from 'node:child_process';
@@ -108,7 +108,8 @@ function main(): void {
       stdio: 'inherit',
     });
 
-    // pnpm pack rewrites workspace:^ deps to concrete semver, like publish does.
+    // pnpm pack produces the exact tarball that publish would, with all
+    // dependency specifiers resolved to concrete semver ranges.
     run('pnpm', ['pack', '--out', join(packDir, 'finterm.tgz')], {
       env: baseEnv,
       stdio: 'inherit',
@@ -120,7 +121,7 @@ function main(): void {
     const tarball = join(packDir, tarballs[0]!);
 
     // The end-user install path. --ignore-scripts per supply-chain policy; any
-    // unresolvable dependency (private workspace package) fails here.
+    // dependency that cannot be resolved from the published manifest fails here.
     run('npm', ['install', '-g', tarball, '--ignore-scripts', '--prefix', prefix], {
       env: baseEnv,
       stdio: 'inherit',
@@ -156,6 +157,67 @@ function main(): void {
     run(fintermBin, ['docs'], { env: installedEnv });
     run(fintermBin, ['tool', 'financial-statements', '--help'], { env: installedEnv });
     run(fintermBin, ['dataroom', 'info', '--help'], { env: installedEnv });
+
+    // npx-style invocation: resolve the package by its installed location and run
+    // its declared bin entry directly (what `npx finterm` does), bypassing the
+    // PATH bin shim. This catches breakage in the package's own bin resolution
+    // that the symlink-based call above would mask.
+    const installedPackageBin = join(
+      prefix,
+      'lib',
+      'node_modules',
+      'finterm',
+      'dist',
+      'bin-bootstrap.cjs'
+    );
+    if (!existsSync(installedPackageBin)) {
+      throw new Error(`Expected installed package bin at ${installedPackageBin}`);
+    }
+    const npxVersion = run(process.execPath, [installedPackageBin, '--version'], {
+      env: installedEnv,
+    }).stdout.trim();
+    if (npxVersion !== version) {
+      throw new Error(
+        `npx-style invocation reported '${npxVersion}', expected '${version}' from the bin shim`
+      );
+    }
+
+    // Stricter resolver leg: install into a separate prefix with a NON-hoisting
+    // strategy so each dependency must resolve from its own subtree. A flat
+    // install can paper over a transitive-only dependency that the package
+    // imports but never declares; a nested install fails loudly instead.
+    // Running `finterm docs --color always` forces the lazy markdown renderer
+    // chunk (marked-terminal -> cli-highlight) to load, proving that deeper
+    // branch of the dependency graph resolves without relying on hoisting.
+    const nestedPrefix = join(tempRoot, 'nested-prefix');
+    const nestedBinDir = join(nestedPrefix, 'bin');
+    mkdirSync(nestedPrefix, { recursive: true });
+    mkdirSync(join(nestedPrefix, 'lib'), { recursive: true });
+    run(
+      'npm',
+      [
+        'install',
+        '-g',
+        tarball,
+        '--ignore-scripts',
+        '--install-strategy=nested',
+        '--prefix',
+        nestedPrefix,
+      ],
+      {
+        env: baseEnv,
+        stdio: 'inherit',
+      }
+    );
+    const nestedFintermBin = join(nestedBinDir, 'finterm');
+    if (!existsSync(nestedFintermBin)) {
+      throw new Error(`Expected installed finterm binary at ${nestedFintermBin}`);
+    }
+    const nestedEnv: NodeJS.ProcessEnv = {
+      HOME: home,
+      PATH: `${nestedBinDir}${delimiter}${dirname(process.execPath)}${delimiter}/usr/bin:/bin`,
+    };
+    run(nestedFintermBin, ['docs', '--color', 'always'], { env: nestedEnv });
 
     console.log(`Pack install smoke passed: ${tarballs[0]} installs and runs from a clean prefix`);
   } finally {

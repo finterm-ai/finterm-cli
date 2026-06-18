@@ -3,8 +3,6 @@
  *
  * Used by shortcut, resources, and form commands to provide
  * consistent behavior for --list, fuzzy search, and exact match.
- *
- * Adapted from tbd's DocCommandHandler.
  */
 
 import type { Command } from 'commander';

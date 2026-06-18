@@ -1,7 +1,5 @@
 /**
  * Base command class for CLI handlers.
- *
- * See: research-modern-typescript-cli-patterns.md#3-base-command-pattern
  */
 
 import type { Command } from 'commander';
@@ -44,7 +42,7 @@ export abstract class BaseCommand {
       }
       const originalError = error instanceof Error ? error : undefined;
       // Include original error message in the main error for better visibility
-      // e.g., "Failed to start login: connect ECONNREFUSED 127.0.0.1:3210"
+      // e.g., "Failed to start login: connect ECONNREFUSED 127.0.0.1:443"
       const fullMessage =
         originalError?.message && originalError.message !== errorMessage
           ? `${errorMessage}: ${originalError.message}`

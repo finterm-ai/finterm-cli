@@ -3,8 +3,6 @@
  *
  * Provides document lookups for the `finterm shortcut` and `finterm resources` command
  * groups, supporting both exact matching by filename and fuzzy matching against metadata.
- *
- * Adapted from tbd's DocCache, simplified for finterm's bundled-only doc model.
  */
 
 import { readdir, readFile } from 'node:fs/promises';

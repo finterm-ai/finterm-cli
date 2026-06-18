@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 /**
- * Post-build guard: fail the build if any dist artifact imports a private
- * workspace package at runtime.
+ * Post-build bundle guard (allowlist-only).
  *
- * tsdown's `noExternal` bare strings can silently miss subpath imports, which
- * once shipped a binary that resolved raw workspace TypeScript at runtime. The
- * regexes in tsdown.config.ts fix it; this guard keeps it fixed. See
- * plan-2026-06-12-finterm-cli-performance-and-quality.md (P1b).
+ * Verifies the shipped output stays within the public runtime surface:
+ *   1. Every bare import/require specifier in the dist artifacts is a relative
+ *      path, a node: builtin, or a known public runtime dependency. Bundling
+ *      can miss a subpath import and ship a specifier that does not resolve for
+ *      a plain-node consumer; this catches any unexpected bare specifier
+ *      without enumerating disallowed ones.
+ *   2. No file in the npm pack dry-run contains a generic credential shape
+ *      (AWS/GitHub/OpenAI keys or a PEM private key).
+ *
+ * On success it prints a single summary line.
  */
 
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { isBuiltin } from 'node:module';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -19,6 +25,33 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(scriptDir, '..');
 const distDir = join(packageRoot, 'dist');
 const repoRoot = resolve(packageRoot, '../..');
+
+// Known public runtime dependencies that may legitimately appear as bare
+// specifiers in bundled output (the package's own deps plus public transitive
+// deps that bundling pulls in by value).
+const BASE_ALLOWED_SPECIFIERS = [
+  'commander',
+  'picocolors',
+  'marked',
+  'marked-terminal',
+  'yaml',
+  'atomically',
+  'open',
+  'undici',
+  'zod',
+  'slugify',
+  'cli-highlight',
+  'chalk',
+  'color-convert',
+];
+
+// Generic credential shapes. Pattern-only by design.
+const SECRET_PATTERNS = [
+  { label: 'AWS access key id', regex: /AKIA[0-9A-Z]{16}/ },
+  { label: 'GitHub token', regex: /gh[pousr]_[0-9A-Za-z]{20,}/ },
+  { label: 'OpenAI-style API key', regex: /sk-[A-Za-z0-9]{20,}/ },
+  { label: 'PEM private key', regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
+];
 
 const TEXT_FILE_EXTENSIONS = new Set([
   '.cjs',
@@ -37,45 +70,8 @@ const TEXT_FILE_EXTENSIONS = new Set([
   '.yaml',
 ]);
 
-/** Package names that must never appear as runtime imports in shipped output. */
-const FORBIDDEN_IMPORT_PATTERN =
-  /(?:from\s*|import\s*\(\s*|require\s*\(\s*)["'](@arena\/[^"']*|@finterm\/dataroom-lmdb(?:\/[^"']*)?|@finterm\/dataroom-cli(?:\/[^"']*)?|dataroom(?:\/[^"']*)?)["']/g;
-
-const FORBIDDEN_TEXT_TERMS = [
-  '@arena/',
-  '@finterm/dataroom-lmdb',
-  'ai-trade-arena',
-  'dxdt-labs',
-  'finterm-main',
-  '@ai-sdk/',
-  'markform',
-  'model-pricing',
-  'monocart-coverage-reports',
-  'tryscript',
-  'llm-pricing',
-  '@finterm/reports',
-  'packages/reports',
-  'backtest',
-  'backtesting',
-  'ticker_data',
-  'stock_prices_current',
-  'stock_prices_historical',
-  'technical_indicators',
-  'earnings_reports',
-  'earnings_guidance',
-  'earnings_calendar',
-  'financial_ratios',
-  'options_prices',
-  'financial_news',
-  'global_news_search',
-  'sec_company_facts',
-  'short_interest',
-  'short_volume',
-  'FINTOOL_',
-  'packages/fintool',
-  'tool definition layer',
-];
-const FORBIDDEN_TEXT_PATTERNS = [/fin-[0-9a-z]{4,}/i];
+// Bare specifier in `from "x"`, `import("x")`, or `require("x")` (either quote).
+const SPECIFIER_PATTERN = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)(["'])([^"']+)\1/g;
 
 function repoRelative(path) {
   return relative(repoRoot, path).split('\\').join('/');
@@ -91,17 +87,26 @@ function extensionOf(path) {
   return dot === -1 ? '' : path.slice(dot);
 }
 
-function walkFiles(dir) {
-  const files = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const child = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...walkFiles(child));
-    } else {
-      files.push(child);
-    }
+/** Package name of a bare specifier (handles scoped names and subpaths). */
+function packageNameOf(specifier) {
+  if (specifier.startsWith('@')) {
+    const parts = specifier.split('/');
+    return parts.slice(0, 2).join('/');
   }
-  return files;
+  return specifier.split('/')[0];
+}
+
+function isRelative(specifier) {
+  return specifier.startsWith('.') || specifier.startsWith('/');
+}
+
+function loadAllowedSpecifiers() {
+  const allowed = new Set(BASE_ALLOWED_SPECIFIERS);
+  const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  for (const name of Object.keys(manifest.dependencies ?? {})) {
+    allowed.add(name);
+  }
+  return allowed;
 }
 
 function packedFiles() {
@@ -120,68 +125,84 @@ function packedFiles() {
     if (!Array.isArray(files)) {
       throw new Error('Could not read npm pack dry-run file list.');
     }
-    return files.map((file) => join(packageRoot, file.path));
+    return files.map((file) => ({ packPath: file.path, absPath: join(packageRoot, file.path) }));
   } finally {
     rmSync(npmCacheDir, { recursive: true, force: true });
   }
 }
 
-function scanForbiddenText(files, label) {
+function scanSecrets(files, label) {
   const leaks = [];
   for (const file of files) {
     if (!TEXT_FILE_EXTENSIONS.has(extensionOf(file))) {
       continue;
     }
     const content = readFileSync(file, 'utf8');
-    const lowerContent = content.toLowerCase();
-    for (const term of FORBIDDEN_TEXT_TERMS) {
-      if (lowerContent.includes(term.toLowerCase())) {
-        leaks.push(`${label}:${repoRelative(file)}: contains forbidden text "${term}"`);
-      }
-    }
-    for (const pattern of FORBIDDEN_TEXT_PATTERNS) {
-      if (pattern.test(content)) {
-        leaks.push(`${label}:${repoRelative(file)}: contains forbidden pattern ${pattern}`);
+    for (const { label: patternLabel, regex } of SECRET_PATTERNS) {
+      if (regex.test(content)) {
+        leaks.push(`${label}:${repoRelative(file)}: matches ${patternLabel} pattern`);
       }
     }
   }
   return leaks;
 }
 
+const allowedSpecifiers = loadAllowedSpecifiers();
+
+// 1. Every bare specifier in dist artifacts must be allowed.
 const artifacts = readdirSync(distDir).filter(
   (name) => (name.endsWith('.mjs') || name.endsWith('.cjs')) && !name.endsWith('.map')
 );
 
-const leaks = [];
+const importLeaks = [];
 for (const name of artifacts) {
   const content = readFileSync(join(distDir, name), 'utf8');
-  for (const match of content.matchAll(FORBIDDEN_IMPORT_PATTERN)) {
-    leaks.push(`${name}: imports "${match[1]}"`);
+  const seen = new Set();
+  for (const match of content.matchAll(SPECIFIER_PATTERN)) {
+    const specifier = match[2];
+    if (isRelative(specifier) || isBuiltin(specifier)) {
+      continue;
+    }
+    if (allowedSpecifiers.has(packageNameOf(specifier))) {
+      continue;
+    }
+    const key = `${name}::${specifier}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    importLeaks.push(`${name}: unexpected bare import "${specifier}"`);
   }
 }
 
-if (leaks.length > 0) {
-  console.error('Bundle leak: dist output imports private workspace packages at runtime:');
-  for (const leak of leaks) {
+if (importLeaks.length > 0) {
+  console.error('Bundle leak: dist output imports specifiers outside the public allowlist:');
+  for (const leak of importLeaks) {
     console.error(`  ${leak}`);
   }
-  console.error('Fix the noExternal config in tsdown.config.ts (use subpath regexes).');
+  console.error(
+    'Add the dependency to package.json, or bundle it via noExternal in tsdown.config.ts.'
+  );
   process.exit(1);
 }
 
-const packLeaks = scanForbiddenText(packedFiles(), 'npm-pack');
-const docsPublicDir = join(repoRoot, 'docs-public');
-const docsPublicFiles = existsSync(docsPublicDir) ? walkFiles(docsPublicDir) : [];
-const docsLeaks = scanForbiddenText(docsPublicFiles, 'docs-public');
+// 2. npm pack content carries no credential-shaped strings. The published file
+// set itself is governed by the package.json "files" allowlist; this scans the
+// shipped content, not file types.
+const packed = packedFiles();
+const packSecretLeaks = scanSecrets(
+  packed.map((file) => file.absPath),
+  'npm-pack'
+);
 
-if (packLeaks.length > 0 || docsLeaks.length > 0) {
-  console.error('Public artifact text leaks:');
-  for (const leak of [...packLeaks, ...docsLeaks]) {
-    console.error(`  ${leak}`);
+if (packSecretLeaks.length > 0) {
+  console.error('Public artifact issues:');
+  for (const issue of packSecretLeaks) {
+    console.error(`  ${issue}`);
   }
   process.exit(1);
 }
 
 console.log(
-  `No bundle leaks in ${artifacts.length} dist artifacts; npm pack and docs-public text are clean.`
+  `No bundle leaks in ${artifacts.length} dist artifacts; npm pack ships ${packed.length} clean files.`
 );

@@ -1,7 +1,5 @@
 /**
  * Version constant injected at build time.
- *
- * See: research-modern-typescript-cli-patterns.md#8-version-handling
  */
 
 // Declare the build-time constant (injected by tsdown.config.ts)

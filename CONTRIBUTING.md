@@ -7,16 +7,10 @@ Before opening a pull request, run:
 pnpm ci
 ```
 
-Keep changes within the public CLI boundary.
-Do not add internal Finterm engine code, provider credentials, private operational docs,
-or unpublished API surfaces.
+Keep changes focused on the CLI and its documentation.
+Do not commit credentials, API keys, or other secrets.
 
 ## Releases
 
-Agents must not publish the npm package.
-Publishing requires explicit human approval, npm ownership setup, provenance/trusted
-publishing review, and a passing release dry run.
-
-<!-- This document follows common-doc-guidelines.md.
-See github.com/jlevy/practical-prose and review guidelines before editing.
--->
+Releases are published to npm by the maintainers, with provenance and trusted
+publishing. Please do not publish the package yourself; open a pull request instead.

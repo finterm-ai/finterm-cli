@@ -113,12 +113,13 @@ Preview tools are not part of the stable first-release CLI surface.
 ### Developer Tools
 
 ```bash
+finterm init               # Initialize finterm in the current directory
 finterm prime              # Load agent context
 finterm docs               # View CLI documentation
 finterm skill              # Print the full agent skill
 finterm shortcut --list    # List agent shortcuts
 finterm resources --list   # List reference resources
-finterm setup       # Install supported agent integration files
+finterm setup              # Install supported agent integration files
 finterm setup --check      # Verify the skill and setup state
 ```
 
@@ -152,7 +153,10 @@ pnpm test:pack         # Smoke-test the packed npm artifact
 
 ## Contributing
 
-We welcome contributions!
+Contributions are welcome.
+See
+[CONTRIBUTING.md](https://github.com/finterm-ai/finterm-cli/blob/main/CONTRIBUTING.md)
+for how to get started.
 
 ## License
 

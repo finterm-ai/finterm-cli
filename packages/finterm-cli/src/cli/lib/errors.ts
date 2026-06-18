@@ -1,7 +1,5 @@
 /**
  * CLI error classes.
- *
- * See: research-modern-typescript-cli-patterns.md#3-base-command-pattern
  */
 
 /**

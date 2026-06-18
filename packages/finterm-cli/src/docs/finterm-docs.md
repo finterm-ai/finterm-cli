@@ -225,6 +225,8 @@ finterm tool ticker_sentiment AAPL --json
 
 | Variable | Description |
 | --- | --- |
+| `FINTERM_API_KEY` | Account API key used for authentication (overrides the stored credentials) |
+| `FINTERM_API_URL` | Override the Finterm API base URL (default: production) |
 | `NO_COLOR` | Disable colors |
 | `CI` | Enables non-interactive mode automatically |
 

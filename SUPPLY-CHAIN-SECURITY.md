@@ -13,10 +13,5 @@ Install and upgrade dependencies conservatively.
 
 ## Publishing
 
-Do not publish from an agent session.
-The first npm publication requires explicit human approval, npm ownership setup,
-provenance/trusted publishing review, and a passing release dry run.
-
-<!-- This document follows common-doc-guidelines.md.
-See github.com/jlevy/practical-prose and review guidelines before editing.
--->
+The package is published to npm by the maintainers, with provenance and trusted
+publishing enabled.

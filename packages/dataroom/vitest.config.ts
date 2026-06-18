@@ -13,7 +13,7 @@ export default defineConfig({
       exclude: ['src/__tests__/**', 'src/**/index.ts'],
     },
     testTimeout: 10000,
-    // LMDB tests benefit from running in isolation
+    // Run tests in a single isolated fork for deterministic filesystem IO
     pool: 'forks',
     poolOptions: {
       forks: {

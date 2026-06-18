@@ -161,7 +161,7 @@ export async function ensureFintermDirs(): Promise<boolean> {
  * - client: Client-side mocking with canned responses
  * - client_error: Client-side mocking that returns error responses
  *
- * Part of the unified MockMode system across finterm-cli, finterm-web, and fintool.
+ * Mock modes for the finterm CLI.
  */
 export type MockMode = 'live' | 'client' | 'client_error';
 
