@@ -1,0 +1,79 @@
+{
+  "name": "finterm",
+  "version": "0.0.1",
+  "description": "Command-line interface for Finterm financial research and Dataroom workflows",
+  "license": "MIT",
+  "author": "Finterm <contact@finterm.ai>",
+  "homepage": "https://finterm.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finterm-ai/finterm-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/finterm-ai/finterm-cli/issues",
+    "email": "contact@finterm.ai"
+  },
+  "keywords": [
+    "finterm",
+    "cli",
+    "finance",
+    "research",
+    "dataroom"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.mts",
+      "default": "./dist/cli.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "finterm": "./dist/bin-bootstrap.cjs"
+  },
+  "files": [
+    "dist",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "pnpm typecheck && node scripts/workspace-bin.mjs tsdown && node scripts/copy-docs.mjs postbuild && node scripts/check-bundle-leaks.mjs",
+    "dev": "node scripts/workspace-bin.mjs tsdown --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm run build && pnpm test:unit && pnpm test:integration",
+    "test:unit": "node scripts/workspace-bin.mjs vitest run --passWithNoTests",
+    "test:e2e": "node -e \"console.log('No public e2e tests yet')\"",
+    "test:integration": "node scripts/workspace-bin.mjs vitest run --config vitest.config.integration.ts --passWithNoTests",
+    "test:watch": "node scripts/workspace-bin.mjs vitest",
+    "publint": "node scripts/workspace-bin.mjs publint",
+    "bench:startup": "node scripts/workspace-bin.mjs tsx scripts/bench-startup.ts",
+    "test:install": "node scripts/workspace-bin.mjs tsx scripts/local-install-smoke.ts",
+    "test:pack": "node scripts/workspace-bin.mjs tsx scripts/pack-install-smoke.ts",
+    "test:uninstall": "node -e \"console.log('test:install uses a temporary prefix and cleans up automatically')\""
+  },
+  "dependencies": {
+    "atomically": "^2.1.1",
+    "commander": "^15.0.0",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "slugify": "^1.6.6",
+    "undici": "^7.22.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.6"
+  }
+}

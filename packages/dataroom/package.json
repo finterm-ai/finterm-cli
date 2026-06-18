@@ -1,0 +1,47 @@
+{
+  "name": "dataroom",
+  "version": "0.0.1",
+  "description": "Database-free DR/0.3 profile:file dataroom core",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./types": {
+      "import": "./src/types.ts",
+      "types": "./src/types.ts"
+    },
+    "./file-profile": {
+      "types": "./src/fileProfile.ts",
+      "import": "./src/fileProfile.ts",
+      "default": "./src/fileProfile.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix --max-warnings 0",
+    "lint:eslint": "eslint . --max-warnings 0",
+    "lint:check": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.11",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "eslint": "^9.39.2",
+    "typescript-eslint": "^8.55.0"
+  },
+  "keywords": [
+    "dataroom",
+    "research",
+    "bundle",
+    "cache",
+    "profile-file"
+  ],
+  "license": "MIT"
+}
