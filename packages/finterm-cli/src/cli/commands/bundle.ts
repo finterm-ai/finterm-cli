@@ -41,11 +41,8 @@ import {
 import { recordDownloadStats } from '../lib/activity-stats.js';
 import { formatBytes, formatDuration } from '../lib/format.js';
 
-type BundleRunMode = NonNullable<BundleRunRequest['mode']>;
-
 interface BundleRunOptions extends ApiOutputOptions {
   companyName?: string;
-  mode?: BundleRunMode;
   asOfDate?: string;
   deliveryMode?: BundleDeliveryMode;
   param?: string[];
@@ -183,7 +180,7 @@ function filterPublishedBundleCatalogResponse(
 
 function assertBundleRunRequest(bundleName: string, request: BundleRunRequest): void {
   assertPublishedBundleName(bundleName);
-  if (bundleName !== COMPANY_WEB_RESEARCH_BUNDLE || request.mode !== 'live') {
+  if (bundleName !== COMPANY_WEB_RESEARCH_BUNDLE || request.mode === 'placeholder') {
     return;
   }
   const missing = COMPANY_WEB_RESEARCH_REQUIRED_LIVE_PARAMS.filter(
@@ -439,11 +436,6 @@ const runCommand = new Command('run')
   .argument('<bundleName>', 'Bundle public name, e.g. company_web_research')
   .argument('<ticker>', 'Company ticker, e.g. AAPL')
   .option('--company-name <name>', 'Company name for display and normalization')
-  .addOption(
-    new Option('--mode <mode>', 'Execution mode')
-      .choices(['placeholder', 'live'])
-      .default('placeholder')
-  )
   .option('--as-of-date <date>', 'Resource snapshot date (YYYY-MM-DD)')
   .addOption(
     new Option('--delivery-mode <mode>', 'Requested delivery mode').choices([
@@ -463,7 +455,6 @@ const runCommand = new Command('run')
         {
           ticker,
           companyName: options.companyName,
-          mode: options.mode,
           asOfDate: options.asOfDate,
           deliveryMode: options.deliveryMode,
           parameters: parseBundleParameters(options.param ?? null),

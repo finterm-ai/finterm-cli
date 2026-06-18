@@ -129,7 +129,7 @@ class PublicMockAPIClient implements FintermAPIClient {
       success: true,
       sessionId,
       pollSecret,
-      loginUrl: `mock://finterm-web/cli-login#session=${sessionId}`,
+      loginUrl: `mock://finterm/cli-login#session=${sessionId}`,
       pollUrl: 'mock://finterm-api/cli/login/poll',
       expiresAt: Date.now() + 15 * 60 * 1000,
     };

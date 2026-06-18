@@ -1,7 +1,7 @@
 /**
  * Finterm API Client
  *
- * HTTP client for communicating with finterm-web API endpoints.
+ * HTTP client for the Finterm API.
  * Features:
  * - Retry logic with exponential backoff (1s, 2s, 4s)
  * - Configurable timeouts (30s default, 60s for SEC fetch)
