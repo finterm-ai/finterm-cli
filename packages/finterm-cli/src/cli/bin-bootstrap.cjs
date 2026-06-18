@@ -14,6 +14,25 @@
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
+const MIN_NODE_VERSION = [22, 12, 0];
+
+function isSupportedNodeVersion(version) {
+  const parts = version.split('.').map((part) => Number.parseInt(part, 10));
+  for (let index = 0; index < MIN_NODE_VERSION.length; index += 1) {
+    const actual = parts[index] ?? 0;
+    const required = MIN_NODE_VERSION[index];
+    if (actual > required) return true;
+    if (actual < required) return false;
+  }
+  return true;
+}
+
+if (!isSupportedNodeVersion(process.versions.node)) {
+  console.error(`finterm requires Node.js >=22.12.0; current Node.js is ${process.versions.node}.`);
+  console.error('Upgrade Node.js, then reinstall or rerun finterm.');
+  process.exit(1);
+}
+
 // Enable compile cache BEFORE loading any ESM modules.
 // This caches compiled bytecode on disk for faster subsequent runs.
 // Available in Node 22.8.0+, gracefully ignored in older versions.
