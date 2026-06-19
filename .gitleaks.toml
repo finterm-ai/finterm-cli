@@ -1,0 +1,12 @@
+# gitleaks configuration: default rule set plus narrow allowlists so the
+# lockfile's integrity hashes and fixture values in tests are not reported as
+# secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfile integrity hashes and test fixtures are not secrets"
+paths = [
+  '''pnpm-lock\.yaml''',
+  '''.*\.test\.ts$''',
+]

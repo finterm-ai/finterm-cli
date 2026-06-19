@@ -1,0 +1,35 @@
+{
+  "name": "@finterm/dataroom-cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Database-free DR/0.3 profile:file dataroom CLI commands",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix --max-warnings 0",
+    "lint:eslint": "eslint . --max-warnings 0",
+    "lint:check": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "dataroom": "workspace:^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.11",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.55.0",
+    "vitest": "^3.2.4"
+  }
+}

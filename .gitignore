@@ -1,0 +1,26 @@
+reports/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+*.tgz
+
+# Coverage
+coverage/
+coverage-*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lock files (managed at workspace level)
+# pnpm-lock.yaml is at repo root

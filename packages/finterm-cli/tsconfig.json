@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"],
+    "noEmit": true,
+    "sourceMap": false,
+    "declarationMap": false,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "tests", "scripts", "*.config.ts"],
+  "exclude": [
+    "src/cli/commands/cache.ts",
+    "src/cli/commands/dev.ts",
+    "src/cli/commands/form.ts",
+    "src/cli/commands/report*.ts",
+    "src/cli/commands/research.ts",
+    "src/cli/forms/**",
+    "src/cli/lib/cost-display.ts",
+    "src/cli/lib/form-*.ts",
+    "src/cli/lib/m*form-runner.ts",
+    "src/cli/lib/m*form-runner.test.ts",
+    "src/cli/lib/model-*.ts",
+    "src/cli/lib/research/**",
+    "src/cli/lib/research-mock.ts",
+    "src/cli/lib/research-mock.test.ts",
+    "src/cli/lib/research-tool-factory.ts",
+    "src/cli/lib/research-tool-factory.test.ts",
+    "src/lib/__mocks__/**",
+    "tests/research-*.test.ts"
+  ]
+}

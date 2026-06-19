@@ -1,0 +1,11 @@
+dist
+node_modules
+coverage
+*.min.js
+*.min.css
+package-lock.json
+
+# IMPORTANT: Markdown files are formatted with flowmark, not prettier!
+# Use lefthook pre-commit hook or run flowmark directly via uvx.
+# Never run prettier on .md files.
+*.md

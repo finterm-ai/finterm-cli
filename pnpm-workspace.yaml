@@ -1,0 +1,13 @@
+packages:
+  - 'packages/*'
+  - 'scripts'
+
+onlyBuiltDependencies: []
+
+minimumReleaseAge: 20160
+# Pre-pinned dev-only build-tool transitive (the rolldown wasm fallback used by
+# tsdown). It is already resolved in the lockfile and is never part of the
+# published runtime, so it is exempt from the release-age cool-off; every other
+# dependency, including all runtime dependencies, must satisfy it.
+minimumReleaseAgeExclude:
+  - '@napi-rs/wasm-runtime'
