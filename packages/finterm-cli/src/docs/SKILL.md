@@ -52,17 +52,21 @@ Use `--json` when another tool or agent needs machine-readable output.
 
 ## Web Research Bundle
 
-Use the published web research bundle when the user asks for a company research packet:
+Use the published web research bundle when the user asks for a company research packet.
+A run executes live and requires the fiscal-period parameters `q`, `fy`, `prev_q`, and
+`prev_fy`; without them the run is rejected before it starts:
 
 ```bash
 finterm bundle catalog
 finterm bundle describe company_web_research
-finterm bundle run company_web_research META
+finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
+finterm bundle status <runId>
 finterm bundle wait <runId>
 finterm bundle result <runId>
 finterm bundle download <runId> --room ./datarooms/meta
 ```
 
+`company_web_research` is the only published bundle.
 Use `finterm runs list` to find resumable local bundle runs.
 
 ## Dataroom Follow-Up
@@ -101,9 +105,11 @@ Room-mutating and authoring verbs are not part of the public `finterm dataroom` 
 
 ### Web Research Bundle
 
-- `finterm bundle catalog` - List available bundles
+- `finterm bundle catalog` - List published bundles
 - `finterm bundle describe company_web_research` - Inspect the web research bundle
-- `finterm bundle run company_web_research <ticker>` - Start a run
+- `finterm bundle run company_web_research <ticker> --param q=.. --param fy=.. --param prev_q=.. --param prev_fy=..`
+  \- Start a live run
+- `finterm bundle status <runId>` - Show run state and next action
 - `finterm bundle wait <runId>` - Wait for completion
 - `finterm bundle result <runId>` - Read the run result
 - `finterm bundle download <runId> --room <dir>` - Sync output into a local room
@@ -145,8 +151,10 @@ Use `--verbose` or `--debug` when checking live API behavior.
 
 ## Quick Reference
 
-- Install with `npm install -g finterm`; run the `finterm` binary
+- Install with `npm install -g finterm` (or run `npx finterm@latest`); needs Node
+  >=22.12
 - Start with `finterm auth status`, `finterm setup --check`, and `finterm tool --help`
 - Use only the published point-tool ids listed above
-- Use `finterm bundle run company_web_research <ticker>` for web research packets
+- Run web research packets with `finterm bundle run company_web_research <ticker>` plus
+  the `q`, `fy`, `prev_q`, and `prev_fy` params
 - Use `finterm dataroom info|list|files|search|read` for local Datarooms

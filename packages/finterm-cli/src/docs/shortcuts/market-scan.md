@@ -33,10 +33,11 @@ Compare volatility, flow, positioning, and put/call sentiment.
 ### 3. Check Filing Catalysts
 
 ```bash
-finterm tool sec_filings_search META --form-type 8-K --as-of-date 2024-12-31
+finterm tool sec_filings_search META --form-type 10-Q --as-of-date 2024-12-31
 ```
 
-Look for recent filing events that may affect the name.
+Look for recent filings that may affect the name.
+`--form-type` accepts `10-K`, `10-Q`, or `all`.
 
 ### 4. Add Ownership Context
 

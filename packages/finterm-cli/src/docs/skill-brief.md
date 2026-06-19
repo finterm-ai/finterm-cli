@@ -29,10 +29,12 @@ Use `--json` when another tool or agent needs structured output.
 
 ## Web Research Bundle
 
-Use the published web research bundle for company research packets:
+Use the published `company_web_research` bundle for company research packets.
+A run executes live and requires the fiscal-period params `q`, `fy`, `prev_q`, and
+`prev_fy`:
 
 ```bash
-finterm bundle run company_web_research META
+finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/meta
 ```

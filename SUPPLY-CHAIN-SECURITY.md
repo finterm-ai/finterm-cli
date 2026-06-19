@@ -1,17 +1,22 @@
 # Supply-Chain Security
 
 Install and upgrade dependencies conservatively.
+These rules limit exposure to compromised or freshly published malicious packages.
 
 ## Rules
 
-- Use `pnpm install --frozen-lockfile`
-- Do not update dependencies without reviewing the lockfile diff
-- Keep the project `.npmrc` 14-day release-age gate enabled
-- Do not add lifecycle-script exceptions without human review
+- Install with `pnpm install --frozen-lockfile` so the resolved tree matches
+  `pnpm-lock.yaml` exactly.
+- Keep the project `.npmrc` release-age gate enabled.
+  It sets `minimum-release-age=20160` (14 days), so a newly published version cannot be
+  installed until it has been public for two weeks.
+- Do not update dependencies without reviewing the lockfile diff.
+- Do not add lifecycle-script exceptions without human review.
 - Do not use unpinned zero-install runners such as unversioned `npx`, `pnpm dlx`, or
-  `curl | sh`
+  `curl | sh`.
 
 ## Publishing
 
-The package is published to npm by the maintainers, with provenance and trusted
-publishing enabled.
+Maintainers publish the package to npm with provenance and trusted publishing enabled.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution and release flow, and
+[SECURITY.md](SECURITY.md) for reporting vulnerabilities.
