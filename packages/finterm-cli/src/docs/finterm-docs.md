@@ -6,11 +6,19 @@ reading.
 
 ## Installation
 
+Run without installing:
+
+```bash
+npx finterm@latest --help
+```
+
+Or install globally so the `finterm` command is always available:
+
 ```bash
 npm install -g finterm
 ```
 
-After installation, the `finterm` command is available globally.
+Finterm requires Node.js 22.12 or newer.
 
 ## Quick Start
 
@@ -22,7 +30,8 @@ finterm setup --check   # Verify agent setup
 finterm setup           # Install supported agent setup
 finterm skill --brief   # Short agent workflow
 finterm tool --help     # Public point-tool surface
-finterm bundle run company_web_research META
+finterm bundle run company_web_research AAPL \
+  --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 ```
 
 ## Commands
@@ -156,15 +165,19 @@ Tool roles:
 
 ### Web Research Bundle Commands
 
-Use `company_web_research` for the published company web research bundle.
+`company_web_research` is the one published bundle.
+A run executes live and requires four fiscal-period parameters: `q`, `fy`, `prev_q`, and
+`prev_fy` (the current and prior fiscal quarter and year).
+Omitting any of them fails before the API is called.
 
 ```bash
 finterm bundle catalog
 finterm bundle describe company_web_research
-finterm bundle run company_web_research META
+finterm bundle run company_web_research AAPL \
+  --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle result <runId>
-finterm bundle download <runId> --room ./datarooms/meta
+finterm bundle download <runId> --room ./datarooms/aapl
 finterm runs list
 ```
 
@@ -176,7 +189,7 @@ finterm runs list
 - `finterm dataroom list <room>` - List room contents
 - `finterm dataroom files <room>` - List file artifacts
 - `finterm dataroom search <room> <query>` - Search file contents
-- `finterm dataroom read <room> <artifact-ref>` - Read one artifact
+- `finterm dataroom read <room> <ref>` - Read one artifact
 
 Examples:
 
@@ -185,7 +198,7 @@ finterm dataroom info ./datarooms/aapl
 finterm dataroom list ./datarooms/aapl
 finterm dataroom files ./datarooms/aapl
 finterm dataroom search ./datarooms/aapl "revenue"
-finterm dataroom read ./datarooms/aapl <artifact-ref>
+finterm dataroom read ./datarooms/aapl <ref>
 ```
 
 Room-mutating and authoring verbs are not exposed under `finterm dataroom`.
@@ -203,6 +216,7 @@ All commands support these global options:
 | `--color <when>` | Control colorization: auto, always, never |
 | `--non-interactive` | Disable prompts, fail if input is required |
 | `--debug` | Show debug information |
+| `--experimental` | Enable preview command groups and tools |
 
 ## JSON Output
 

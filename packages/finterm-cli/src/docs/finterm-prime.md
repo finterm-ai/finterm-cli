@@ -36,8 +36,11 @@ Approved point-tool ids: `financial_statements`, `insider_trades`,
 
 ## Web Research Bundle
 
+The published `company_web_research` bundle runs live and requires the fiscal-period
+params `q`, `fy`, `prev_q`, and `prev_fy`:
+
 ```bash
-finterm bundle run company_web_research META
+finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/meta
 ```

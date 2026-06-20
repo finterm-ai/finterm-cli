@@ -15,13 +15,16 @@ npm install -g finterm@latest
 # Authenticate with Finterm
 finterm auth login
 
-# Run a company web research bundle and sync its output locally
-finterm bundle run company_web_research AAPL
+# Run a company web research bundle and sync its output locally.
+# Live runs require the fiscal-period params (current and prior quarter/year).
+finterm bundle run company_web_research AAPL \
+  --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/aapl
 
 # Run a point data tool
-finterm tool financial_statements AAPL
+finterm tool financial_statements AAPL \
+  --statement-type income_statement --as-of-date 2025-01-01
 
 # View help
 finterm --help
@@ -40,13 +43,18 @@ Dataroom sync:
 
 ```bash
 finterm bundle catalog                       # List available research bundles
-finterm bundle run company_web_research AAPL # Start a web research run
+finterm bundle describe company_web_research # Show one bundle's descriptor
+# Start a live web research run (fiscal-period params are required):
+finterm bundle run company_web_research AAPL \
+  --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle status|wait|result <runId>    # Inspect or poll a run
 finterm bundle download <runId> --room <dir> # Sync published run files into a local room
 finterm runs list                            # Local ledger of resumable runs
 finterm dataroom info|list|files|search|read <room>
                                              # Read and search a downloaded Dataroom
 ```
+
+The only published bundle is `company_web_research`.
 
 ### Point Data Tools
 
@@ -74,11 +82,12 @@ finterm auth status  # Check source, token id, and masked key
 
 ### Developer Tools
 
-- **Prime** - Load development context
-- **Docs** - View documentation
-- **Setup** - Install and verify agent integration files (`finterm setup|--check`)
-- **Shortcuts/resources** - Inspect agent shortcuts and reference resources
-- **Activity summary** - A bundle download prints a brief size/time summary in regular
+- **Prime:** Load development context
+- **Docs:** View documentation
+- **Setup:** Install and verify agent integration files (`finterm setup`,
+  `finterm setup --check`)
+- **Shortcuts and resources:** Inspect agent shortcuts and reference resources
+- **Activity summary:** A bundle download prints a brief size/time summary in regular
   output; `--verbose` or `--debug` add per-request API and bundle-download stats on
   stderr, and `--debug` also saves a structured activity snapshot under the local
   Finterm config directory
@@ -87,8 +96,8 @@ finterm auth status  # Check source, token id, and masked key
 
 ### Environment Variables
 
-- `FINTERM_API_URL` - Finterm API base URL (default: production)
-- `FINTERM_API_KEY` - Account API key override (from the dashboard or
+- `FINTERM_API_URL`: Finterm API base URL (default: production)
+- `FINTERM_API_KEY`: Account API key override (from the dashboard or
   `finterm auth login`)
 
 ## Commands

@@ -17,11 +17,12 @@ Prepare a concise pre-earnings view for one ticker.
 
 ```bash
 finterm tool sec_filings_search <TICKER> --form-type 10-Q --as-of-date 2024-12-31
-finterm tool sec_filings_search <TICKER> --form-type 8-K --as-of-date 2024-12-31
+finterm tool sec_filings_search <TICKER> --form-type 10-K --as-of-date 2024-12-31
 finterm tool sec_filing_fetch <TICKER> --year 2024 --period Q3 --sections mda,risk_factors
 ```
 
 Look for recent operating commentary, risks, and material events.
+`sec_filings_search --form-type` accepts `10-K`, `10-Q`, or `all`.
 
 ### 2. Check Financial Statements
 

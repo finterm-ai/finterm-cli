@@ -57,7 +57,7 @@ tags:
 | META | Meta Platforms |
 | TSLA | Tesla |
 
-## Bond & Commodity ETFs
+## Bond and Commodity ETFs
 
 | Symbol | Asset Class |
 | --- | --- |
