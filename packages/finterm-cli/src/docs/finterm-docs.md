@@ -9,13 +9,13 @@ reading.
 Run without installing:
 
 ```bash
-npx finterm@latest --help
+npx @finterm-ai/cli@latest --help
 ```
 
 Or install globally so the `finterm` command is always available:
 
 ```bash
-npm install -g finterm
+npm install -g @finterm-ai/cli
 ```
 
 Finterm requires Node.js 22.12 or newer.

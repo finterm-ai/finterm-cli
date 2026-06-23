@@ -1,7 +1,7 @@
-# Releasing `finterm`
+# Releasing the Finterm CLI
 
-This is the release runbook for the `finterm` npm package.
-It has two parts:
+This is the release runbook for the `@finterm-ai/cli` npm package (the `finterm`
+command). It has two parts:
 
 - **One-time bootstrap** — the first manual publish that claims the package name, plus
   the GitHub Actions Trusted Publisher (OIDC) setup that lets every later release
@@ -10,8 +10,8 @@ It has two parts:
 - **Ongoing releases** — the automated flow for every version after the first: bump,
   tag, push. CI publishes.
 
-The package lives in `packages/finterm-cli` and publishes as the unscoped npm package
-`finterm` with the `finterm` binary.
+The package lives in `packages/finterm-cli` and publishes as the scoped npm package
+`@finterm-ai/cli` with the `finterm` binary.
 The release workflow is
 [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
@@ -51,8 +51,8 @@ The order is fixed:
 Run from the repo root unless noted; none of these change anything.
 
 1. **Name is free** (only relevant for the very first publish):
-   `curl -s -o /dev/null -w '%{http_code}' https://registry.npmjs.org/finterm` returns
-   `404`.
+   `curl -s -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@finterm-ai%2Fcli`
+   returns `404`.
 
 2. **Version is intended:**
    `node -p "require('./packages/finterm-cli/package.json').version"` is the version you
@@ -100,19 +100,20 @@ cd packages/finterm-cli
 npm publish --access public --no-provenance
 ```
 
-- `--access public` publishes publicly (required for scoped names, harmless here).
+- `--access public` is required to publish a scoped package (`@finterm-ai/cli`)
+  publicly; scoped packages default to restricted.
 - `--no-provenance` is required for a local publish: provenance needs CI’s OIDC
   identity. Automated releases add provenance later.
 - `npm publish` runs the package’s `prepack` script first (`pnpm run build`), so the
   artifact is freshly built from source.
 
-Then the agent verifies: `npm view finterm version` returns the bootstrap version, and
-`https://registry.npmjs.org/finterm` no longer returns `404`.
+Then the agent verifies: `npm view @finterm-ai/cli version` returns the bootstrap
+version, and `https://registry.npmjs.org/@finterm-ai%2Fcli` no longer returns `404`.
 
 ### Phase 3: configure the trusted publisher (maintainer, web UI)
 
-On npmjs.com, open the **finterm** package, then Settings, then **Trusted Publishing**,
-add a GitHub Actions publisher, and enter exactly:
+On npmjs.com, open the **@finterm-ai/cli** package, then Settings, then **Trusted
+Publishing**, add a GitHub Actions publisher, and enter exactly:
 
 | Field | Value |
 | --- | --- |

@@ -151,8 +151,8 @@ Use `--verbose` or `--debug` when checking live API behavior.
 
 ## Quick Reference
 
-- Install with `npm install -g finterm` (or run `npx finterm@latest`); needs Node
-  >=22.12
+- Install with `npm install -g @finterm-ai/cli` (or run `npx @finterm-ai/cli@latest`);
+  needs Node >=22.12
 - Start with `finterm auth status`, `finterm setup --check`, and `finterm tool --help`
 - Use only the published point-tool ids listed above
 - Run web research packets with `finterm bundle run company_web_research <ticker>` plus

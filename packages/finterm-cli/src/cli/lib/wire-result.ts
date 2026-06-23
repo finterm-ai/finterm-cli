@@ -60,7 +60,7 @@ export interface FallbackResultMeta {
 }
 
 const WIRE_RESULT_YAML_BANNER =
-  '# Finterm result. Visit finterm.ai or run `npx finterm@latest --help` for details.';
+  '# Finterm result. Visit finterm.ai or run `npx @finterm-ai/cli@latest --help` for details.';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
