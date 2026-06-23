@@ -33,5 +33,7 @@ dependency.
 
 ## Releases
 
-Maintainers publish releases to npm with provenance and trusted publishing.
-Do not publish the package yourself; open a pull request instead.
+Maintainers publish releases to npm with provenance and trusted publishing (OIDC), from
+CI on a pushed `v*` tag. Do not publish the package yourself; open a pull request
+instead. The full process — the one-time bootstrap and the ongoing automated flow — is
+in [docs/RELEASING.md](docs/RELEASING.md).

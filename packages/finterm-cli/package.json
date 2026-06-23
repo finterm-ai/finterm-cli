@@ -1,6 +1,6 @@
 {
   "name": "finterm",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Command-line interface for Finterm financial research and Dataroom workflows",
   "license": "MIT",
   "author": "Finterm <contact@finterm.ai>",

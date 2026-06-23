@@ -4,14 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: # build/check-only dry run; never publishes (publish is gated to tags)
 
 permissions:
-  id-token: write
+  id-token: write # OIDC trusted publishing (no token) + provenance attestation
   contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/finterm-cli
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -19,14 +23,34 @@ jobs:
           version: 10.28.2
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.12.0'
+          # OIDC trusted publishing requires Node >= 22.14.0 and npm >= 11.5.1.
+          node-version: '22.18.0'
           cache: pnpm
           registry-url: https://registry.npmjs.org
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run ci
-      - name: Guard against dirty build version
+      - name: Use an npm that supports trusted publishing
+        # Pinned, not @latest: OIDC trusted publishing needs npm >= 11.5.1, and this job
+        # holds id-token: write, so it must not pull an unpinned global. Bump deliberately.
+        run: npm install -g npm@11.5.1
+        working-directory: ${{ github.workspace }}
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ${{ github.workspace }}
+      - name: Run full check suite
+        run: pnpm run ci
+        working-directory: ${{ github.workspace }}
+      - name: Verify package version matches the release tag
+        if: github.ref_type == 'tag'
         run: |
-          version="$(node -p "require('./packages/finterm-cli/package.json').version")"
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          echo "tag=$TAG package.json=$PKG"
+          test "$TAG" = "$PKG" || {
+            echo "::error::release tag v$TAG does not match packages/finterm-cli/package.json version $PKG"
+            exit 1
+          }
+      - name: Guard against a dirty build version
+        run: |
+          version="$(node -p "require('./package.json').version")"
           echo "Publishing finterm version: $version"
           case "$version" in
             *-dirty*)
@@ -34,5 +58,11 @@ jobs:
               exit 1
               ;;
           esac
-      - name: Publish to npm
-        run: pnpm --filter finterm publish --provenance --access public --no-git-checks
+      - name: Publish to npm (trusted publishing, OIDC)
+        # Only a pushed tag publishes; workflow_dispatch runs the steps above as a dry run.
+        # No NODE_AUTH_TOKEN: authentication is the OIDC id-token above, configured as a
+        # trusted publisher on npmjs.com (see docs/RELEASING.md). --provenance attaches a
+        # build attestation. Requires the package to already exist with a trusted publisher
+        # configured; the first version is published manually (the one-time bootstrap).
+        if: github.ref_type == 'tag'
+        run: npm publish --access public --provenance
