@@ -1,10 +1,10 @@
 # Finterm CLI Agent Guide
 
-This repository builds the public `finterm` npm package and its `finterm` command, a
-client for the Finterm API and for reading local Datarooms.
-See [README.md](README.md) for user-facing usage, [CONTRIBUTING.md](CONTRIBUTING.md)
-for the contribution flow, and [docs/RELEASING.md](docs/RELEASING.md) for the npm
-release process (one-time OIDC bootstrap and the ongoing automated flow).
+This repository builds the public `@finterm-ai/cli` npm package and its `finterm`
+command, a client for the Finterm API and for reading local Datarooms.
+See [README.md](README.md) for user-facing usage, [CONTRIBUTING.md](CONTRIBUTING.md) for
+the contribution flow, and [docs/RELEASING.md](docs/RELEASING.md) for the npm release
+process (one-time OIDC bootstrap and the ongoing automated flow).
 
 ## Repository Layout
 
@@ -53,7 +53,7 @@ the package).
 
 ## Rules
 
-- The package ships one npm package named `finterm` and one binary named `finterm`.
+- The repo ships one npm package named `@finterm-ai/cli` and one binary named `finterm`.
 - Use `contact@finterm.ai` for public support and security contacts.
 - Install dependencies with `pnpm install --frozen-lockfile`. The project `.npmrc`
   enforces a 14-day package release-age gate; see

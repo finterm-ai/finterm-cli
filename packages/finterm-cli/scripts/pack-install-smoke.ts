@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Smoke-test the real publish artifact: pack a tarball and install it globally
- * into a temporary prefix, exactly as an end user's `npm install -g finterm` would.
+ * into a temporary prefix, exactly as an end user's `npm install -g @finterm-ai/cli` would.
  *
  * Unlike local-install-smoke.ts (npm link, which never resolves the dependency
  * manifest), a tarball install fails loudly on any dependency that cannot be
@@ -159,14 +159,15 @@ function main(): void {
     run(fintermBin, ['dataroom', 'info', '--help'], { env: installedEnv });
 
     // npx-style invocation: resolve the package by its installed location and run
-    // its declared bin entry directly (what `npx finterm` does), bypassing the
+    // its declared bin entry directly (what `npx @finterm-ai/cli` does), bypassing the
     // PATH bin shim. This catches breakage in the package's own bin resolution
     // that the symlink-based call above would mask.
     const installedPackageBin = join(
       prefix,
       'lib',
       'node_modules',
-      'finterm',
+      '@finterm-ai',
+      'cli',
       'dist',
       'bin-bootstrap.cjs'
     );

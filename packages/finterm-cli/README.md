@@ -5,8 +5,8 @@ Command-line interface for Finterm financial data and Dataroom workflows.
 ## Installation
 
 ```bash
-npx finterm@latest --help
-npm install -g finterm@latest
+npx @finterm-ai/cli@latest --help
+npm install -g @finterm-ai/cli@latest
 ```
 
 ## Quick Start
@@ -175,4 +175,4 @@ MIT
 
 For issues and questions, use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
-contact@finterm.ai.
+mailto:contact@finterm.ai.
