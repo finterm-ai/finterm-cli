@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.1
+## 0.1.0
 
 First public release of the `finterm` CLI for Finterm financial research and Dataroom
 workflows.

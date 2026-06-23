@@ -2,8 +2,9 @@
 
 This repository builds the public `finterm` npm package and its `finterm` command, a
 client for the Finterm API and for reading local Datarooms.
-See [README.md](README.md) for user-facing usage and [CONTRIBUTING.md](CONTRIBUTING.md)
-for the contribution flow.
+See [README.md](README.md) for user-facing usage, [CONTRIBUTING.md](CONTRIBUTING.md)
+for the contribution flow, and [docs/RELEASING.md](docs/RELEASING.md) for the npm
+release process (one-time OIDC bootstrap and the ongoing automated flow).
 
 ## Repository Layout
 
