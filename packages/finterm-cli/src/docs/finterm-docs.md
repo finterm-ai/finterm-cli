@@ -1,8 +1,8 @@
 # Finterm CLI Documentation
 
-The Finterm CLI (`finterm` package, `finterm` command) provides authenticated financial
-data lookups, company web research bundle runs, agent documentation, and local Dataroom
-reading.
+The Finterm CLI (`@finterm-ai/cli` package, `finterm` command) provides authenticated
+financial data lookups, company web research bundle runs, agent documentation, and local
+Dataroom reading.
 
 ## Installation
 
@@ -246,4 +246,4 @@ finterm tool ticker_sentiment AAPL --json
 
 ## Links
 
-- npm package target: https://www.npmjs.com/package/finterm
+- npm package: https://www.npmjs.com/package/@finterm-ai/cli
