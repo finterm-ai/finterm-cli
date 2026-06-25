@@ -157,7 +157,7 @@ pnpm finterm:bin
 pnpm test                       # Run all tests
 pnpm test:install               # Smoke-test local preview install
 pnpm test:uninstall             # Remove the local preview install
-pnpm --filter finterm test:pack # Smoke-test the packed npm artifact
+pnpm --filter @finterm-ai/cli test:pack # Smoke-test the packed npm artifact
 ```
 
 ## Contributing
@@ -167,10 +167,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started.
 
 ## License
 
-MIT
+Copyright (C) 2026 Finterm.
+
+Licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+See [LICENSE](LICENSE) for the full text.
 
 ## Support
 
 For issues and questions, use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
-mailto:contact@finterm.ai.
+<contact@finterm.ai>.

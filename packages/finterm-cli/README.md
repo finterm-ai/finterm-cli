@@ -169,10 +169,13 @@ for how to get started.
 
 ## License
 
-MIT
+Copyright (C) 2026 Finterm.
+
+Licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+See [LICENSE](LICENSE) for the full text.
 
 ## Support
 
 For issues and questions, use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
-mailto:contact@finterm.ai.
+<contact@finterm.ai>.

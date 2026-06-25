@@ -346,7 +346,9 @@ class AuthLogoutHandler extends BaseCommand {
 }
 
 const loginCommand = new Command('login')
-  .description('Authenticate with the Finterm platform before running company research bundles')
+  .description(
+    'Authenticate with the Finterm platform before running point tools or company-research bundles'
+  )
   .option('--no-browser', 'Do not automatically open browser')
   .option('--device-name <name>', 'Device name for this login')
   .action(async (options, command) => {
@@ -355,7 +357,7 @@ const loginCommand = new Command('login')
   });
 
 const statusCommand = new Command('status')
-  .description('Check current authentication status for bundle research')
+  .description('Check current authentication status for Finterm data access')
   .action(async (_options, command) => {
     const handler = new AuthStatusHandler(command);
     await handler.run();
@@ -369,7 +371,7 @@ const logoutCommand = new Command('logout')
   });
 
 export const authCommand = new Command('auth')
-  .description('Login and token commands for authenticated company research')
+  .description('Login and token commands for authenticated Finterm data access')
   .addCommand(loginCommand)
   .addCommand(statusCommand)
   .addCommand(logoutCommand);

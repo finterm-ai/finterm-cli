@@ -53,6 +53,8 @@ const binPath = path.join(__dirname, 'bin.mjs');
 import(pathToFileURL(binPath).href).catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`finterm failed to start: ${message}`);
-  console.error('Reinstalling the package may fix a corrupt install: npm install -g finterm');
+  console.error(
+    'Reinstalling the package may fix a corrupt install: npm install -g @finterm-ai/cli'
+  );
   process.exit(1);
 });

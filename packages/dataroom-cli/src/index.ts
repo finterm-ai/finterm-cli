@@ -53,14 +53,14 @@ const DEFAULT_SEARCH_LIMIT = 20;
  */
 export function buildDataroomCommand(): Command {
   const command = new Command('dataroom').description(
-    'Read and search a downloaded local Dataroom (DR/0.3 profile:file room)'
+    'Read and search a downloaded local Dataroom'
   );
 
   command.option('--json', 'Output as JSON');
 
   command
     .command('files <room>')
-    .description('List file artifacts in a DR/0.3 profile:file room')
+    .description('List file artifacts in a downloaded local Dataroom')
     .option('--path-prefix <prefix>', 'Only include files under this path prefix')
     .option(
       '--facet <key=value>',
@@ -74,7 +74,7 @@ export function buildDataroomCommand(): Command {
 
   command
     .command('search <room> <query>')
-    .description('Search text file artifacts in a DR/0.3 profile:file room')
+    .description('Search text file artifacts in a downloaded local Dataroom')
     .option('--path-prefix <prefix>', 'Only search files under this path prefix')
     .option(
       '--facet <key=value>',
@@ -88,14 +88,14 @@ export function buildDataroomCommand(): Command {
 
   command
     .command('read <room> <ref>')
-    .description('Read a file artifact from a DR/0.3 profile:file room')
+    .description('Read a file artifact from a downloaded local Dataroom')
     .option('--max-bytes <n>', 'Maximum bytes to return')
     .option('--json', 'Output as JSON')
     .action(readAction);
 
   command
     .command('list <room>')
-    .description('List file artifacts in a DR/0.3 profile:file room')
+    .description('List file artifacts in a downloaded local Dataroom')
     .option('--path-prefix <prefix>', 'Only include files under this path prefix')
     .option(
       '--facet <key=value>',
@@ -109,7 +109,7 @@ export function buildDataroomCommand(): Command {
 
   command
     .command('info <room>')
-    .description('Show DR/0.3 profile:file room information')
+    .description('Show downloaded local Dataroom information')
     .option('--json', 'Output as JSON')
     .action(infoAction);
 
