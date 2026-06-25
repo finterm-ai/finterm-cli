@@ -2,7 +2,7 @@
   "name": "@finterm-ai/cli",
   "version": "0.1.0",
   "description": "Command-line interface for Finterm financial research and Dataroom workflows",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "author": "Finterm <contact@finterm.ai>",
   "homepage": "https://finterm.ai",
   "repository": {
