@@ -25,5 +25,9 @@ coverage-*/
 .DS_Store
 Thumbs.db
 
-# Lock files (managed at workspace level)
-# pnpm-lock.yaml is at repo root
+# Lock files: this is a pnpm workspace, so pnpm-lock.yaml at the repo root is the only
+# lockfile of record. Ignore stray npm/yarn lockfiles so an accidental `npm install` or
+# `yarn` in a package dir can't commit a second, drifting lockfile that would bypass the
+# .npmrc release-age gate.
+package-lock.json
+yarn.lock
