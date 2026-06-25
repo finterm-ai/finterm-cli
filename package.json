@@ -19,7 +19,7 @@
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "precommit": "pnpm format && pnpm lint && pnpm test && pnpm build",
-    "ci": "pnpm format:check && pnpm lint:check && pnpm test && pnpm build && pnpm publint && pnpm --filter @finterm-ai/cli test:pack && pnpm public:check",
+    "ci": "pnpm format:check && pnpm --filter @finterm-ai/cli api:check && pnpm --filter @finterm-ai/cli spec:check && pnpm lint:check && pnpm test && pnpm build && pnpm publint && pnpm --filter @finterm-ai/cli test:pack && pnpm --filter @finterm-ai/cli test:uninstall && pnpm public:check",
     "finterm": "tsx packages/finterm-cli/src/cli/bin.ts",
     "finterm:bin": "pnpm --filter @finterm-ai/cli build && node packages/finterm-cli/dist/bin-bootstrap.cjs",
     "upgrade:check": "ncu --format group",

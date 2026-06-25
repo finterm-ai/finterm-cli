@@ -54,16 +54,20 @@
     "build": "pnpm typecheck && node scripts/workspace-bin.mjs tsdown && node scripts/copy-docs.mjs postbuild && node scripts/check-bundle-leaks.mjs",
     "dev": "node scripts/workspace-bin.mjs tsdown --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm run build && pnpm test:unit && pnpm test:integration",
+    "api:sync": "node scripts/sync-api-docs.mjs",
+    "api:check": "node scripts/sync-api-docs.mjs --check",
+    "spec:sync": "node scripts/workspace-bin.mjs tsx scripts/generate-command-spec.mjs",
+    "spec:check": "node scripts/workspace-bin.mjs tsx scripts/generate-command-spec.mjs --check",
+    "test": "pnpm run build && pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test:unit": "node scripts/workspace-bin.mjs vitest run",
-    "test:e2e": "node -e \"console.log('No public e2e tests yet')\"",
+    "test:e2e": "node scripts/workspace-bin.mjs tsx scripts/e2e-smoke.ts",
     "test:integration": "node scripts/workspace-bin.mjs vitest run --config vitest.config.integration.ts --passWithNoTests",
     "test:watch": "node scripts/workspace-bin.mjs vitest",
     "publint": "node scripts/workspace-bin.mjs publint",
     "bench:startup": "node scripts/workspace-bin.mjs tsx scripts/bench-startup.ts",
     "test:install": "node scripts/workspace-bin.mjs tsx scripts/local-install-smoke.ts",
     "test:pack": "node scripts/workspace-bin.mjs tsx scripts/pack-install-smoke.ts",
-    "test:uninstall": "node -e \"console.log('test:install uses a temporary prefix and cleans up automatically')\""
+    "test:uninstall": "node scripts/workspace-bin.mjs tsx scripts/uninstall-smoke.ts"
   },
   "dependencies": {
     "atomically": "^2.1.1",

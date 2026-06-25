@@ -22,16 +22,31 @@ process.stderr.on('error', (err: NodeJS.ErrnoException) => {
 // Bootstrap proxy support for Node.js native fetch.
 // Node.js fetch does not honor HTTP_PROXY/HTTPS_PROXY env vars by default
 // (NODE_USE_ENV_PROXY requires Node 23+). Use undici's ProxyAgent when available.
+import { getGlobalDispatcher } from 'undici';
+
 import { bootstrapProxy } from '../lib/proxy-bootstrap.js';
 import { runCli } from './cli.js';
 
-void bootstrapProxy()
-  .then(() => runCli())
-  .catch((error: unknown) => {
-    // Bootstrap failures (e.g. an invalid proxy configuration) happen before the
-    // CLI's own error handling is in place. Print a clean one-line message
-    // instead of dumping a raw stack trace.
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`finterm: ${message}`);
-    process.exit(1);
-  });
+async function closeFetchDispatcher(): Promise<void> {
+  await getGlobalDispatcher()
+    .close()
+    .catch(() => undefined);
+}
+
+async function main(): Promise<void> {
+  await bootstrapProxy();
+  try {
+    await runCli();
+  } finally {
+    await closeFetchDispatcher();
+  }
+}
+
+void main().catch((error: unknown) => {
+  // Bootstrap failures (e.g. an invalid proxy configuration) happen before the
+  // CLI's own error handling is in place. Print a clean one-line message
+  // instead of dumping a raw stack trace.
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`finterm: ${message}`);
+  process.exit(1);
+});

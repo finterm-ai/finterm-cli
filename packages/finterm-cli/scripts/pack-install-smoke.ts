@@ -155,7 +155,7 @@ function main(): void {
     // One command per group beyond help: docs (agent guidance), point tools,
     // and Dataroom command discovery, all network-free.
     run(fintermBin, ['docs'], { env: installedEnv });
-    run(fintermBin, ['tool', 'financial-statements', '--help'], { env: installedEnv });
+    run(fintermBin, ['tool', 'financial_statements', '--help'], { env: installedEnv });
     run(fintermBin, ['dataroom', 'info', '--help'], { env: installedEnv });
 
     // npx-style invocation: resolve the package by its installed location and run

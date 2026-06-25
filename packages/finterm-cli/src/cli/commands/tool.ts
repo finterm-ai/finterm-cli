@@ -7,9 +7,10 @@
 
 import { Command, InvalidArgumentError, Option } from 'commander';
 
+import { FINTERM_TOOL_DEFINITIONS } from '../../api/toolDefinitions.generated.js';
+import { FINTERM_TOOL_IDS, type FintermToolId, visibleFintermToolIds } from '../../api/toolIds.js';
 import { BaseCommand } from '../lib/base-command.js';
 import { getAuthenticatedClient } from '../lib/authenticated-client.js';
-import { FINTERM_TOOL_IDS, type FintermToolId, visibleFintermToolIds } from '../../api/toolIds.js';
 import type { FintermAPIClient } from '../../lib/api-client.js';
 import {
   apiCallToFintermWireResult,
@@ -145,7 +146,6 @@ class ToolHandler extends BaseCommand {
 }
 
 const financialStatementsCommand = new Command('financial_statements')
-  .description('Get financial statements (balance sheet, income, cash flow)')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .addOption(
     new Option('--statement-type <type>', 'Statement type')
@@ -195,7 +195,6 @@ const financialStatementsCommand = new Command('financial_statements')
   );
 
 const optionsSentimentCommand = new Command('options_sentiment')
-  .description('Get options sentiment analysis')
   .argument('<ticker>', 'Underlying stock ticker (e.g., AAPL)')
   .requiredOption('--as-of-date <date>', 'Date for analysis (YYYY-MM-DD)')
   .option('--include-spread-analysis', 'Include spread analysis', false)
@@ -239,7 +238,6 @@ const optionsSentimentCommand = new Command('options_sentiment')
 // -- SEC Filings --
 
 const filingsSearchCommand = new Command('sec_filings_search')
-  .description('Search SEC EDGAR filings (10-K, 10-Q)')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .addOption(
     new Option('--form-type <type>', 'Filter by form type')
@@ -272,7 +270,6 @@ const filingsSearchCommand = new Command('sec_filings_search')
   );
 
 const filingsFetchCommand = new Command('sec_filing_fetch')
-  .description('Fetch and parse SEC filing content')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .requiredOption('--year <year>', 'Fiscal year (e.g., 2024)', parseYear)
   .addOption(
@@ -347,7 +344,6 @@ function parseFilingRef(value: string): { year: number; period: FilingPeriod } {
 }
 
 const filingsDiffCommand = new Command('sec_filing_diff')
-  .description('Diff two SEC 10-K/10-Q filings')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .requiredOption('--base <year:period>', 'Earlier filing as YEAR:PERIOD (e.g., 2023:FY)')
   .requiredOption('--compare <year:period>', 'Later filing as YEAR:PERIOD (e.g., 2024:FY)')
@@ -402,7 +398,6 @@ const filingsDiffCommand = new Command('sec_filing_diff')
 // -- Ownership --
 
 const insiderTradesCommand = new Command('insider_trades')
-  .description('Get SEC Form 4 insider transactions and holdings')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)')
   .option('--limit <number>', 'Maximum rows to return', parsePositiveInteger)
@@ -454,7 +449,6 @@ const insiderTradesCommand = new Command('insider_trades')
   );
 
 const institutionalHoldingsCommand = new Command('institutional_holdings')
-  .description('Get institutional 13F holdings by ticker or investor CIK')
   .argument('[ticker]', 'Stock ticker (e.g., AAPL); omit when using --investor-cik')
   .option('--investor-cik <cik>', 'Investor portfolio mode: SEC CIK')
   .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)')
@@ -490,7 +484,6 @@ const institutionalHoldingsCommand = new Command('institutional_holdings')
 // -- Sentiment --
 
 const optionsOverviewCommand = new Command('options_overview')
-  .description('Get an options-market overview (IV, put/call, open interest)')
   .argument('<ticker>', 'Stock ticker (e.g., TSLA)')
   .option('--as-of-date <date>', "As-of date: 'today' (default) or YYYY-MM-DD (live data only)")
   .action(
@@ -506,7 +499,6 @@ const optionsOverviewCommand = new Command('options_overview')
   );
 
 const tickerSentimentCommand = new Command('ticker_sentiment')
-  .description('Get aggregated news and social sentiment for a ticker')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .option('--as-of-date <date>', "As-of date: 'today' (default) or YYYY-MM-DD (live data only)")
   .action(
@@ -555,9 +547,11 @@ export function createToolCommand(
   );
 
   for (const toolSubcommand of ALL_TOOL_COMMANDS) {
-    if (!visibleToolIds.has(toolSubcommand.name() as FintermToolId)) {
+    const toolId = toolSubcommand.name();
+    if (!visibleToolIds.has(toolId as FintermToolId)) {
       continue;
     }
+    applyGeneratedToolDescription(toolSubcommand, toolId);
     command.addCommand(toolSubcommand);
   }
 
@@ -569,6 +563,17 @@ export function createToolCommand(
 
   validateRegisteredToolCommands(command, visibleToolIds);
   return command;
+}
+
+function applyGeneratedToolDescription(subcommand: Command, toolId: string): void {
+  const definition = FINTERM_TOOL_DEFINITIONS[toolId];
+  if (!definition) {
+    throw new Error(
+      `Finterm tool subcommand "${toolId}" is visible but missing from ` +
+        'src/api/toolDefinitions.generated.ts. Run `pnpm --filter @finterm-ai/cli api:sync`.'
+    );
+  }
+  subcommand.description(definition.summary);
 }
 
 /**

@@ -1,0 +1,420 @@
+[
+  {
+    "id": "financial_statements",
+    "summary": "Reported balance sheet, income statement, or cash flow for a company.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--statement-type <type>",
+        "description": "Statement type",
+        "required": true,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["balance_sheet", "income_statement", "cash_flow"]
+      },
+      {
+        "flags": "--as-of-date <date>",
+        "description": "Filing/resource as-of date (YYYY-MM-DD)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--timeframe <timeframe>",
+        "description": "Timeframe",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["quarterly", "annual", "trailing_twelve_months"],
+        "default": "annual"
+      },
+      {
+        "flags": "--limit <number>",
+        "description": "Number of periods to return",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "default": 4
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "options_sentiment",
+    "summary": "Put/call options sentiment for a symbol on a specific date, with a sample-quality verdict.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Underlying stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--as-of-date <date>",
+        "description": "Date for analysis (YYYY-MM-DD)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--include-spread-analysis",
+        "description": "Include spread analysis",
+        "required": false,
+        "takesValue": false,
+        "negate": false,
+        "default": false
+      },
+      {
+        "flags": "--expiration-filter <filter>",
+        "description": "Filter by expiration window",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--max-contracts <number>",
+        "description": "Maximum contracts to analyze",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "default": 50
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "sec_filings_search",
+    "summary": "Search SEC EDGAR filings for a company by ticker and form type.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--form-type <type>",
+        "description": "Filter by form type",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["10-K", "10-Q", "all"],
+        "default": "all"
+      },
+      {
+        "flags": "--as-of-date <date>",
+        "description": "Only filings after this date (YYYY-MM-DD)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--limit <number>",
+        "description": "Maximum filings to return",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "default": 10
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "sec_filing_fetch",
+    "summary": "Fetch narrative sections from a company’s SEC filing by fiscal year and period.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--year <year>",
+        "description": "Fiscal year (e.g., 2024)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--period <period>",
+        "description": "Fiscal period",
+        "required": true,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["FY", "Q1", "Q2", "Q3", "Q4"]
+      },
+      {
+        "flags": "--sections <sections>",
+        "description": "Comma-separated section names (e.g., risk_factors,business)",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "default": "risk_factors"
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Output format",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["text", "json", "yaml"],
+        "default": "text"
+      }
+    ]
+  },
+  {
+    "id": "sec_filing_diff",
+    "summary": "Compare two of a company’s SEC filings and report section-level changes.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--base <year:period>",
+        "description": "Earlier filing as YEAR:PERIOD (e.g., 2023:FY)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--compare <year:period>",
+        "description": "Later filing as YEAR:PERIOD (e.g., 2024:FY)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--sections <sections>",
+        "description": "Comma-separated section names (e.g., risk_factors,mda)",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "default": "risk_factors,mda,business,legal"
+      },
+      {
+        "flags": "--mode <mode>",
+        "description": "Output mode",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["diff", "raw", "summary"],
+        "default": "diff"
+      },
+      {
+        "flags": "--no-qa",
+        "description": "Skip the QA fidelity review",
+        "required": false,
+        "takesValue": false,
+        "negate": true
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "insider_trades",
+    "summary": "SEC Form 4 insider transactions with a trailing 90-day open-market summary.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--as-of-date <date>",
+        "description": "As-of filing date (YYYY-MM-DD)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--limit <number>",
+        "description": "Maximum rows to return",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--transaction-codes <codes>",
+        "description": "Comma-separated Form 4 codes (P,S,A,M,F,G,C,W)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--include-derivatives",
+        "description": "Include derivative-security rows",
+        "required": false,
+        "takesValue": false,
+        "negate": false,
+        "default": false
+      },
+      {
+        "flags": "--include-holdings",
+        "description": "Include ownership-statement rows",
+        "required": false,
+        "takesValue": false,
+        "negate": false,
+        "default": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "institutional_holdings",
+    "summary": "SEC Form 13F institutional holders for a stock or the portfolio of one manager.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": false,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL); omit when using --investor-cik"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--investor-cik <cik>",
+        "description": "Investor portfolio mode: SEC CIK",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--as-of-date <date>",
+        "description": "As-of filing date (YYYY-MM-DD)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--limit <number>",
+        "description": "Maximum rows to return",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "options_overview",
+    "summary": "A live one-call options overview: implied vs realized volatility with rank, today's flow, the positioning book, expected moves, and probability bands.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., TSLA)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--as-of-date <date>",
+        "description": "As-of date: 'today' (default) or YYYY-MM-DD (live data only)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "ticker_sentiment",
+    "summary": "A live 0-100 sentiment composite for a ticker: seven components scored vs the ticker's own year, grouped trend / flow / positioning.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Stock ticker (e.g., AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--as-of-date <date>",
+        "description": "As-of date: 'today' (default) or YYYY-MM-DD (live data only)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  }
+]
