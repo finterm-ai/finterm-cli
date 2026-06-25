@@ -175,4 +175,4 @@ MIT
 
 For issues and questions, use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
-mailto:contact@finterm.ai.
+<contact@finterm.ai>.

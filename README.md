@@ -157,7 +157,7 @@ pnpm finterm:bin
 pnpm test                       # Run all tests
 pnpm test:install               # Smoke-test local preview install
 pnpm test:uninstall             # Remove the local preview install
-pnpm --filter finterm test:pack # Smoke-test the packed npm artifact
+pnpm --filter @finterm-ai/cli test:pack # Smoke-test the packed npm artifact
 ```
 
 ## Contributing
@@ -173,4 +173,4 @@ MIT
 
 For issues and questions, use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
-mailto:contact@finterm.ai.
+<contact@finterm.ai>.

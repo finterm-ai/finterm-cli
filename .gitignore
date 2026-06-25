@@ -1,5 +1,8 @@
 reports/
 
+# Internal-only working notes and plans (not published, not part of the OSS repo)
+attic/
+
 # Dependencies
 node_modules/
 .pnpm-store/
