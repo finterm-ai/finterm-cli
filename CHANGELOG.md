@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1
+
+### Fixes
+
+- Sync `finterm tool` help descriptions from the committed public `.api.md`
+  definitions, including the corrected `ticker_sentiment` 0-100 composite summary.
+- Add drift checks for generated tool descriptions and command-spec metadata so CLI
+  help, docs inputs, and packaged API definitions stay aligned.
+- Replace the placeholder e2e/uninstall checks with real CLI smoke coverage in the
+  release CI path.
+
 ## 0.1.0
 
 First public release of the `finterm` CLI for Finterm financial research and Dataroom
