@@ -28,18 +28,24 @@ finterm tool options_sentiment META --as-of-date 2024-01-15
 finterm tool ticker_sentiment META
 finterm tool insider_trades META --as-of-date 2024-03-15
 finterm tool institutional_holdings META --as-of-date 2024-03-15
+finterm tool stock_prices_current NVDA META
+finterm tool technical_indicators META --as-of-date 2024-01-16
 ```
 
 Approved point-tool ids: `financial_statements`, `insider_trades`,
 `institutional_holdings`, `options_sentiment`, `options_overview`, `sec_filing_diff`,
-`sec_filing_fetch`, `sec_filings_search`, and `ticker_sentiment`.
+`sec_filing_fetch`, `sec_filings_search`, `stock_prices_current`,
+`technical_indicators`, and `ticker_sentiment`.
 
-## Web Research Bundle
+## Bundles
 
-The published `company_web_research` bundle runs live and requires the fiscal-period
-params `q`, `fy`, `prev_q`, and `prev_fy`:
+The `ticker_data` bundle returns the full fundamentals snapshot for one ticker with no
+extra params (`finterm tool ticker_data <ticker>` is shorthand for a run).
+The `company_web_research` bundle runs live and requires the fiscal-period params `q`,
+`fy`, `prev_q`, and `prev_fy`:
 
 ```bash
+finterm bundle run ticker_data META
 finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/meta

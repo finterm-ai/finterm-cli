@@ -75,7 +75,12 @@ describe('committed finterm API docs', () => {
       }
     }
 
-    expect([...advertised].sort()).toEqual([...(FINTERM_TOOL_IDS as readonly string[])].sort());
+    // Subset, not equality: bundle-backed docs (ticker_data) advertise
+    // `finterm bundle run` in their examples rather than the tool sugar.
+    const registered = new Set<string>(FINTERM_TOOL_IDS as readonly string[]);
+    for (const id of advertised) {
+      expect(registered.has(id), `advertised tool command ${id} is not registered`).toBe(true);
+    }
   });
 
   it('marks exactly the first-release API docs as published', () => {

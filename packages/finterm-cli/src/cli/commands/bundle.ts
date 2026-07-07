@@ -89,11 +89,13 @@ const COMMAND_FAILURE_EXIT_CODE = 1;
 
 const COMPANY_WEB_RESEARCH_BUNDLE = 'company_web_research';
 
+export const TICKER_DATA_BUNDLE = 'ticker_data';
+
 /**
  * Bundles exposed by this CLI. The server may offer more, but commands accept and list
  * only these so the published surface stays narrow and predictable.
  */
-const PUBLISHED_BUNDLE_NAMES = new Set<string>([COMPANY_WEB_RESEARCH_BUNDLE]);
+const PUBLISHED_BUNDLE_NAMES = new Set<string>([COMPANY_WEB_RESEARCH_BUNDLE, TICKER_DATA_BUNDLE]);
 
 /** Parameters a live (non-placeholder) company web research run cannot run without. */
 const COMPANY_WEB_RESEARCH_REQUIRED_LIVE_PARAMS = ['q', 'fy', 'prev_q', 'prev_fy'] as const;
@@ -160,7 +162,7 @@ function snakeBundleRunRequest(
 }
 
 /** Parse repeated `--param key=value` flags into a parameter map, rejecting malformed entries. */
-function parseBundleParameters(values: string[] | null): Record<string, unknown> {
+export function parseBundleParameters(values: string[] | null): Record<string, unknown> {
   const parameters: Record<string, unknown> = {};
   const entries = values ?? [];
   for (const value of entries) {
@@ -246,8 +248,9 @@ function markWaitStatusExitCode(status: AgentRunStatus): void {
 /**
  * Executes the `bundle` subcommands against the authenticated API, rendering every
  * response through the shared wire-result envelope so text and JSON output stay aligned.
+ * Exported so bundle-backed `finterm tool` subcommands share the run-creation path.
  */
-class BundleHandler extends BaseCommand {
+export class BundleHandler extends BaseCommand {
   /**
    * Shared path for read-only bundle actions: run one API call, wrap it in a wire
    * result, render it, and propagate any error exit code.

@@ -23,17 +23,20 @@ finterm tool ticker_sentiment META
 
 Approved point-tool ids are `financial_statements`, `insider_trades`,
 `institutional_holdings`, `options_sentiment`, `options_overview`, `sec_filing_diff`,
-`sec_filing_fetch`, `sec_filings_search`, and `ticker_sentiment`.
+`sec_filing_fetch`, `sec_filings_search`, `stock_prices_current`,
+`technical_indicators`, and `ticker_sentiment`.
 
 Use `--json` when another tool or agent needs structured output.
 
-## Web Research Bundle
+## Bundles
 
-Use the published `company_web_research` bundle for company research packets.
-A run executes live and requires the fiscal-period params `q`, `fy`, `prev_q`, and
-`prev_fy`:
+Use the `ticker_data` bundle for the full fundamentals snapshot of one ticker (no extra
+params; `finterm tool ticker_data <ticker>` is shorthand for a run).
+Use the `company_web_research` bundle for company research packets; a run executes live
+and requires the fiscal-period params `q`, `fy`, `prev_q`, and `prev_fy`:
 
 ```bash
+finterm bundle run ticker_data META
 finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/meta

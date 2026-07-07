@@ -3,8 +3,9 @@ name: finterm
 description: >
   Run authenticated Finterm financial-data lookups and read local Datarooms. Use when
   users ask for financial statements, SEC filings, ownership, options sentiment,
-  ticker sentiment, the web research bundle, or Dataroom artifacts. Start with auth,
-  setup, point-tool help, and the mounted Dataroom read/search verbs.
+  ticker sentiment, current prices, technical indicators, the ticker data or web
+  research bundles, or Dataroom artifacts. Start with auth, setup, point-tool help,
+  and the mounted Dataroom read/search verbs.
 allowed-tools: Bash(finterm:*), Read, Grep, Glob
 ---
 # Finterm CLI
@@ -46,13 +47,26 @@ finterm tool options_sentiment META --as-of-date 2024-01-15
 finterm tool ticker_sentiment META
 finterm tool insider_trades META --as-of-date 2024-03-15
 finterm tool institutional_holdings META --as-of-date 2024-03-15
+finterm tool stock_prices_current NVDA META
+finterm tool technical_indicators META --as-of-date 2024-01-16
 ```
 
 Use `--json` when another tool or agent needs machine-readable output.
 
-## Web Research Bundle
+## Bundles
 
-Use the published web research bundle when the user asks for a company research packet.
+Two bundles are published: `ticker_data` and `company_web_research`.
+
+Use `ticker_data` for the full fundamentals snapshot of one ticker; it needs no extra
+parameters, and `finterm tool ticker_data <ticker>` is shorthand for starting a run:
+
+```bash
+finterm bundle run ticker_data META
+finterm bundle wait <runId>
+finterm bundle result <runId>
+```
+
+Use `company_web_research` when the user asks for a company research packet.
 A run executes live and requires the fiscal-period parameters `q`, `fy`, `prev_q`, and
 `prev_fy`; without them the run is rejected before it starts:
 
@@ -66,7 +80,6 @@ finterm bundle result <runId>
 finterm bundle download <runId> --room ./datarooms/meta
 ```
 
-`company_web_research` is the only published bundle.
 Use `finterm runs list` to find resumable local bundle runs.
 
 ## Dataroom Follow-Up
@@ -103,9 +116,10 @@ Room-mutating and authoring verbs are not part of the public `finterm dataroom` 
 - `finterm shortcut [query]` / `--list` - Find agent shortcuts
 - `finterm resources [query]` / `--list` - Find reference resources
 
-### Web Research Bundle
+### Bundles
 
 - `finterm bundle catalog` - List published bundles
+- `finterm bundle run ticker_data <ticker>` - Start a full ticker snapshot run
 - `finterm bundle describe company_web_research` - Inspect the web research bundle
 - `finterm bundle run company_web_research <ticker> --param q=.. --param fy=.. --param prev_q=.. --param prev_fy=..`
   \- Start a live run
@@ -127,6 +141,9 @@ Use `finterm tool <id>` for authenticated live data and filing lookups.
 - `sec_filing_diff` - Compare two SEC filing sections
 - `sec_filing_fetch` - Fetch SEC filing narrative sections
 - `sec_filings_search` - Search SEC filings by ticker and form type
+- `stock_prices_current` - Latest trade price for one or more symbols
+- `technical_indicators` - RSI, MACD, and SMA indicators for one or more symbols
+- `ticker_data` - Full ticker snapshot bundle run (async; returns a run id)
 - `ticker_sentiment` - Live ticker sentiment composite
 
 Run `finterm tool <id> --help` before adding flags.

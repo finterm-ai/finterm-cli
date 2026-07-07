@@ -30,6 +30,21 @@ const MOCK_BUNDLE_CATALOG: BundleCatalogData = {
   catalogVersion: '2026-06-17',
   bundles: [
     {
+      name: 'ticker_data',
+      descriptorId: 'ticker_data',
+      toolFamily: 'bundle',
+      summary:
+        'Aggregated company fundamentals bundle with earnings, prices, ratios, and statements.',
+      execution: 'async',
+      lifecycle: 'placeholder',
+      deliveryModes: ['inline_result', 'artifact_metadata'],
+      artifactTypes: ['result_json', 'run_manifest', 'resource_events'],
+      runEndpoint: '/api/v1/bundles/ticker_data/runs',
+      inputSchemaRef: '/api/v1/catalog/bundles/ticker_data/input-schema',
+      outputSchemaRef: '/api/v1/catalog/bundles/ticker_data/output-schema',
+      requiredScopes: ['bundle:fundamentals', 'runs:create'],
+    },
+    {
       name: 'company_web_research',
       descriptorId: 'company_web_research',
       toolFamily: 'package',
@@ -76,7 +91,7 @@ function normalizeMockBundleRequest(
  * queries statelessly, without tracking issued runs.
  */
 function parseMockRunId(runId: string): { bundleName: string; ticker: string } | null {
-  const match = /^run_ph_mock_(company_web_research)_([A-Z0-9.]+)$/.exec(runId);
+  const match = /^run_ph_mock_(company_web_research|ticker_data)_([A-Z0-9.]+)$/.exec(runId);
   if (!match) {
     return null;
   }
@@ -392,6 +407,42 @@ class PublicMockAPIClient implements FintermAPIClient {
     };
   }
 
+  async stockPricesCurrent(params: { symbols: string[] }): Promise<APIResponse<unknown>> {
+    const quotes = params.symbols.map((symbol, index) => ({
+      ticker: symbol.toUpperCase(),
+      price: 172.62 + index,
+    }));
+    if (quotes.length === 1) {
+      return { success: true, data: quotes[0] };
+    }
+    return {
+      success: true,
+      data: Object.fromEntries(quotes.map((quote) => [quote.ticker, quote])),
+    };
+  }
+
+  async technicalIndicators(params: {
+    symbols: string[];
+    date: string;
+  }): Promise<APIResponse<unknown>> {
+    const indicators = params.symbols.map((symbol, index) => ({
+      ticker: symbol.toUpperCase(),
+      rsi_14: 61.3 + index,
+      macd_value: 2.41,
+      macd_signal: 1.98,
+      macd_histogram: 0.43,
+      sma_20: 168.9,
+      sma_50: 161.2,
+    }));
+    if (indicators.length === 1) {
+      return { success: true, data: indicators[0] };
+    }
+    return {
+      success: true,
+      data: Object.fromEntries(indicators.map((entry) => [entry.ticker, entry])),
+    };
+  }
+
   async bundleCatalog(): Promise<APIResponse<BundleCatalogData>> {
     return {
       success: true,
@@ -482,7 +533,7 @@ class PublicMockAPIClient implements FintermAPIClient {
       data: {
         ...status.data,
         result: {
-          kind: 'company_web_research_placeholder',
+          kind: `${status.data.bundleName}_placeholder`,
           ticker: status.data.normalizedRequest.ticker,
           dataroomAvailable: false,
           providerExecution: 'not_wired',

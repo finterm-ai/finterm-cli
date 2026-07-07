@@ -46,6 +46,19 @@ export const FINTERM_TOOL_DEFINITIONS: Record<string, FintermToolDefinition> = {
     title: 'SEC Filings Search',
     summary: 'Search SEC EDGAR filings for a company by ticker and form type.',
   },
+  stock_prices_current: {
+    title: 'Current Stock Prices',
+    summary: 'Latest trade price for one or more stock symbols.',
+  },
+  technical_indicators: {
+    title: 'Technical Indicators',
+    summary: 'Standard momentum and trend indicators (RSI, MACD, SMA) for a symbol.',
+  },
+  ticker_data: {
+    title: 'Ticker Data',
+    summary:
+      'The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context — in one call.',
+  },
   ticker_sentiment: {
     title: 'Ticker Sentiment',
     summary:
