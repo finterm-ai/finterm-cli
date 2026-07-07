@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.0
+
+### Features
+
+- **Three new published tools**, matching the Finterm API surface:
+  - `finterm tool stock_prices_current <symbols...>` — latest trade price for one or
+    more symbols.
+  - `finterm tool technical_indicators <symbols...> --as-of-date <date>` — RSI, MACD,
+    and SMA indicators.
+  - `ticker_data` — the full ticker snapshot bundle: `finterm bundle catalog`,
+    `describe`, and `run` now accept it, and `finterm tool ticker_data <ticker>` is
+    shorthand for creating a run.
+- Mock mode covers the new tools and the `ticker_data` bundle.
+- Skill, prime, brief, and docs surfaces list the new tools and bundle.
+
 ## 0.1.1
 
 ### Fixes
