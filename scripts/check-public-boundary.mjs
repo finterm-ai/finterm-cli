@@ -39,6 +39,9 @@ const expectedApiDocs = [
   'sec_filing_diff.api.md',
   'sec_filing_fetch.api.md',
   'sec_filings_search.api.md',
+  'stock_prices_current.api.md',
+  'technical_indicators.api.md',
+  'ticker_data.api.md',
   'ticker_sentiment.api.md',
 ].sort();
 

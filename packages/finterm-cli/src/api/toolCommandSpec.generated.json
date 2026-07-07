@@ -416,5 +416,107 @@
         "choices": ["json", "yaml"]
       }
     ]
+  },
+  {
+    "id": "stock_prices_current",
+    "summary": "Latest trade price for one or more stock symbols.",
+    "args": [
+      {
+        "name": "symbols",
+        "required": true,
+        "variadic": true,
+        "description": "Stock ticker symbols (e.g., NVDA AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "technical_indicators",
+    "summary": "Standard momentum and trend indicators (RSI, MACD, SMA) for a symbol.",
+    "args": [
+      {
+        "name": "symbols",
+        "required": true,
+        "variadic": true,
+        "description": "Stock ticker symbols (e.g., NVDA AAPL)"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--as-of-date <date>",
+        "description": "As-of date (YYYY-MM-DD)",
+        "required": true,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
+  },
+  {
+    "id": "ticker_data",
+    "summary": "The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context — in one call.",
+    "args": [
+      {
+        "name": "ticker",
+        "required": true,
+        "variadic": false,
+        "description": "Company ticker, e.g. AAPL"
+      }
+    ],
+    "options": [
+      {
+        "flags": "--company-name <name>",
+        "description": "Company name for display and normalization",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--as-of-date <date>",
+        "description": "Resource snapshot date (YYYY-MM-DD)",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--delivery-mode <mode>",
+        "description": "Requested delivery mode",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["inline_result", "artifact_metadata", "summary_json", "dataroom_sync"]
+      },
+      {
+        "flags": "--param <key=value...>",
+        "description": "Additional bundle parameter values",
+        "required": false,
+        "takesValue": true,
+        "negate": false
+      },
+      {
+        "flags": "--format <format>",
+        "description": "Render API result as json or yaml",
+        "required": false,
+        "takesValue": true,
+        "negate": false,
+        "choices": ["json", "yaml"]
+      }
+    ]
   }
 ]

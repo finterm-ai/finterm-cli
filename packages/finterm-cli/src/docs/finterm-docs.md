@@ -135,6 +135,9 @@ Current public ids:
 - `sec_filing_diff`
 - `sec_filing_fetch`
 - `sec_filings_search`
+- `stock_prices_current`
+- `technical_indicators`
+- `ticker_data`
 - `ticker_sentiment`
 
 Examples:
@@ -149,6 +152,9 @@ finterm tool options_sentiment AAPL --as-of-date 2024-01-15
 finterm tool ticker_sentiment AAPL
 finterm tool insider_trades AAPL --as-of-date 2024-03-15
 finterm tool institutional_holdings AAPL --as-of-date 2024-03-15
+finterm tool stock_prices_current NVDA AAPL
+finterm tool technical_indicators AAPL --as-of-date 2024-01-16
+finterm tool ticker_data AAPL
 ```
 
 Tool roles:
@@ -161,17 +167,29 @@ Tool roles:
 - `sec_filing_diff` - Compare two SEC filing sections
 - `sec_filing_fetch` - Fetch SEC filing narrative sections
 - `sec_filings_search` - Search SEC filings by ticker and form type
+- `stock_prices_current` - Latest trade price for one or more symbols
+- `technical_indicators` - RSI, MACD, and SMA indicators for one or more symbols
+- `ticker_data` - Full ticker snapshot bundle run (async; returns a run id)
 - `ticker_sentiment` - Live ticker sentiment composite
 
-### Web Research Bundle Commands
+### Bundle Commands
 
-`company_web_research` is the one published bundle.
+Two bundles are published: `ticker_data` and `company_web_research`.
+
+`ticker_data` aggregates earnings, guidance, prices, ratios, options sentiment, short
+pressure, technicals, statements, and pre-earnings context for one ticker; it needs no
+extra parameters (`finterm tool ticker_data AAPL` is shorthand for a run).
+
+A `company_web_research` run executes live and requires four fiscal-period parameters:
+`q`, `fy`, `prev_q`, and `prev_fy` (the current and prior fiscal quarter and year).
 A run executes live and requires four fiscal-period parameters: `q`, `fy`, `prev_q`, and
 `prev_fy` (the current and prior fiscal quarter and year).
 Omitting any of them fails before the API is called.
 
 ```bash
 finterm bundle catalog
+finterm bundle describe ticker_data
+finterm bundle run ticker_data AAPL
 finterm bundle describe company_web_research
 finterm bundle run company_web_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024

@@ -616,6 +616,8 @@ export interface FintermAPIClient {
   }): Promise<APIResponse<unknown>>;
   optionsOverview(params: { ticker: string; asOfDate?: string }): Promise<APIResponse<unknown>>;
   tickerSentiment(params: { ticker: string; asOfDate?: string }): Promise<APIResponse<unknown>>;
+  stockPricesCurrent(params: { symbols: string[] }): Promise<APIResponse<unknown>>;
+  technicalIndicators(params: { symbols: string[]; date: string }): Promise<APIResponse<unknown>>;
 
   // Bundle endpoints (token required)
   bundleCatalog(): Promise<APIResponse<BundleCatalogData>>;
@@ -1049,6 +1051,27 @@ class LiveFintermAPIClient implements FintermAPIClient {
       'POST',
       '/api/v1/ticker-sentiment',
       { ticker: params.ticker, as_of_date: params.asOfDate },
+      AUTHENTICATED_REQUEST_OPTIONS
+    );
+  }
+
+  async stockPricesCurrent(params: { symbols: string[] }): Promise<APIResponse<unknown>> {
+    return this.request(
+      'POST',
+      '/api/v1/prices/current',
+      { symbols: params.symbols },
+      AUTHENTICATED_REQUEST_OPTIONS
+    );
+  }
+
+  async technicalIndicators(params: {
+    symbols: string[];
+    date: string;
+  }): Promise<APIResponse<unknown>> {
+    return this.request(
+      'POST',
+      '/api/v1/technical-indicators',
+      { symbols: params.symbols, date: params.date },
       AUTHENTICATED_REQUEST_OPTIONS
     );
   }

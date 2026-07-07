@@ -59,7 +59,7 @@ describe('extractToolCommandSpecs', () => {
 
   it('covers every visible tool subcommand', () => {
     const specs = extractToolCommandSpecs(createToolCommand({ experimental: true }));
-    expect(specs.length).toBe(9);
+    expect(specs.length).toBe(12);
     for (const spec of specs) {
       expect(spec.summary.length).toBeGreaterThan(0);
       expect(spec.args.length).toBeGreaterThan(0);

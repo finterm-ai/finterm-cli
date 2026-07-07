@@ -11,7 +11,8 @@ import { FINTERM_TOOL_DEFINITIONS } from '../../api/toolDefinitions.generated.js
 import { FINTERM_TOOL_IDS, type FintermToolId, visibleFintermToolIds } from '../../api/toolIds.js';
 import { BaseCommand } from '../lib/base-command.js';
 import { getAuthenticatedClient } from '../lib/authenticated-client.js';
-import type { FintermAPIClient } from '../../lib/api-client.js';
+import type { BundleDeliveryMode, FintermAPIClient } from '../../lib/api-client.js';
+import { BundleHandler, parseBundleParameters, TICKER_DATA_BUNDLE } from './bundle.js';
 import {
   apiCallToFintermWireResult,
   createApiOutputFormatOption,
@@ -69,6 +70,18 @@ export const TOOL_RESULT_SPECS = {
   institutional_holdings: {
     schema: 'finterm.result:InstitutionalHoldings/v1',
     tool: 'institutional_holdings',
+  },
+  stock_prices_current: {
+    schema: 'finterm.result:StockPricesCurrent/v1',
+    tool: 'stock_prices_current',
+  },
+  technical_indicators: {
+    schema: 'finterm.result:TechnicalIndicators/v1',
+    tool: 'technical_indicators',
+  },
+  ticker_data: {
+    schema: 'finterm.result:TickerDataBundle/v1',
+    tool: 'ticker_data',
   },
 } satisfies Record<FintermToolId, Omit<FallbackResultMeta, 'args'>>;
 
@@ -513,6 +526,84 @@ const tickerSentimentCommand = new Command('ticker_sentiment')
     }
   );
 
+// -- Prices and indicators --
+
+const stockPricesCurrentCommand = new Command('stock_prices_current')
+  .argument('<symbols...>', 'Stock ticker symbols (e.g., NVDA AAPL)')
+  .action(async (symbols: string[], options: ApiOutputOptions, command: Command) => {
+    const handler = new ToolHandler(command);
+    await handler.run(
+      'stock_prices_current',
+      { symbols },
+      (client) => client.stockPricesCurrent({ symbols }),
+      options
+    );
+  });
+
+const technicalIndicatorsCommand = new Command('technical_indicators')
+  .argument('<symbols...>', 'Stock ticker symbols (e.g., NVDA AAPL)')
+  .requiredOption('--as-of-date <date>', 'As-of date (YYYY-MM-DD)')
+  .action(
+    async (
+      symbols: string[],
+      options: { asOfDate: string } & ApiOutputOptions,
+      command: Command
+    ) => {
+      const handler = new ToolHandler(command);
+      await handler.run(
+        'technical_indicators',
+        { symbols, date: options.asOfDate },
+        (client) => client.technicalIndicators({ symbols, date: options.asOfDate }),
+        options
+      );
+    }
+  );
+
+// -- Bundle-backed tools --
+
+const tickerDataCommand = new Command('ticker_data')
+  .argument('<ticker>', 'Company ticker, e.g. AAPL')
+  .option('--company-name <name>', 'Company name for display and normalization')
+  .option('--as-of-date <date>', 'Resource snapshot date (YYYY-MM-DD)')
+  .addOption(
+    new Option('--delivery-mode <mode>', 'Requested delivery mode').choices([
+      'inline_result',
+      'artifact_metadata',
+      'summary_json',
+      'dataroom_sync',
+    ])
+  )
+  .option('--param <key=value...>', 'Additional bundle parameter values')
+  .action(
+    async (
+      ticker: string,
+      options: {
+        companyName?: string;
+        asOfDate?: string;
+        deliveryMode?: BundleDeliveryMode;
+        param?: string[];
+      } & ApiOutputOptions,
+      command: Command
+    ) => {
+      // ticker_data is a bundle: the tool subcommand is sugar for creating a run,
+      // sharing the bundle run path (ledger entry, resume hints) rather than a
+      // synchronous point-tool call.
+      const handler = new BundleHandler(command);
+      await handler.createRun(
+        TICKER_DATA_BUNDLE,
+        {
+          ticker,
+          companyName: options.companyName,
+          asOfDate: options.asOfDate,
+          deliveryMode: options.deliveryMode,
+          parameters: parseBundleParameters(options.param ?? null),
+        },
+        options,
+        'run'
+      );
+    }
+  );
+
 const ALL_TOOL_COMMANDS = [
   financialStatementsCommand,
   optionsSentimentCommand,
@@ -526,6 +617,11 @@ const ALL_TOOL_COMMANDS = [
   // Sentiment
   optionsOverviewCommand,
   tickerSentimentCommand,
+  // Prices and indicators
+  stockPricesCurrentCommand,
+  technicalIndicatorsCommand,
+  // Bundle-backed
+  tickerDataCommand,
 ] as const;
 
 export interface CreateToolCommandOptions {

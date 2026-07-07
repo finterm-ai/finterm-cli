@@ -22,6 +22,9 @@ export const FINTERM_TOOL_IDS = [
   'sec_filing_diff',
   'insider_trades',
   'institutional_holdings',
+  'stock_prices_current',
+  'technical_indicators',
+  'ticker_data',
 ] as const;
 
 export type FintermToolId = (typeof FINTERM_TOOL_IDS)[number];
@@ -39,6 +42,9 @@ export const FINTERM_TOOL_PUBLICATION_STATES: Record<
   sec_filing_diff: 'published',
   insider_trades: 'published',
   institutional_holdings: 'published',
+  stock_prices_current: 'published',
+  technical_indicators: 'published',
+  ticker_data: 'published',
 };
 
 /** Controls whether preview-tier tools are included alongside published ones. */
