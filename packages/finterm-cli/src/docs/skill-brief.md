@@ -28,7 +28,7 @@ Approved point-tool ids are `financial_statements`, `insider_trades`,
 
 Use `--json` when another tool or agent needs structured output.
 
-The API surface is paid (Finterm Pro; 3-day trial, card required). On a 402
+The API surface is paid (Finterm Pro). On a 402
 `SUBSCRIPTION_REQUIRED`, do not retry in a loop: relay the upgrade URL
 (`error.upgrade_url`, or https://app.finterm.ai/pricing) to your operator and re-run
 after checkout. On a 401 for a previously working key, the key was rotated — re-run

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { planStateLines } from './auth.js';
 
 describe('planStateLines (C2/C4 plan-aware messaging)', () => {
-  it('gives a free account the trial pointer', () => {
+  it('gives a free account the upgrade pointer, with no offer terms', () => {
     const lines = planStateLines({
       hasPro: false,
       status: null,
@@ -11,7 +11,8 @@ describe('planStateLines (C2/C4 plan-aware messaging)', () => {
       upgradeUrl: 'https://app.finterm.ai/pricing',
     });
     expect(lines[0]).toBe('Plan: free — API access requires Pro.');
-    expect(lines[1]).toBe('Start your 3-day trial: https://app.finterm.ai/pricing');
+    expect(lines[1]).toBe('Upgrade: https://app.finterm.ai/pricing');
+    expect(lines.join('\n')).not.toMatch(/\$\d|\/month|trial|card/i);
   });
 
   it('falls back to the known upgrade URL when the server sent none', () => {

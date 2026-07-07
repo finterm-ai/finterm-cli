@@ -30,8 +30,8 @@ intentional.
 ## Account, Plan, and the Paywall
 
 Finterm is a paid product: every authenticated API call requires **Finterm Pro** (there
-is no free API tier). A new account activates Pro by starting the **3-day free trial**
-(card required, $150/month launch rate) at https://app.finterm.ai/pricing.
+is no free API tier). A new account activates Pro at https://app.finterm.ai/pricing —
+current pricing and trial terms are stated there.
 
 - `finterm auth login` needs the human once, in a browser. Headless runs can use a
   dashboard-minted key via `FINTERM_API_KEY` instead.
@@ -39,8 +39,8 @@ is no free API tier). A new account activates Pro by starting the **3-day free t
   when access fails, so you can explain why.
 - A call from a non-Pro account fails with **HTTP 402, code `SUBSCRIPTION_REQUIRED`**;
   with `--json`/`--format` the error carries a machine-readable `error.upgrade_url`.
-  Do not retry in a loop. **Relay the paywall to your operator**: the plan state, the
-  upgrade URL, and that the 3-day trial unlocks access.
+  Do not retry in a loop. **Relay the paywall to your operator**: the plan state and
+  the upgrade URL — activating a plan there unlocks access.
 - After the human completes checkout, simply re-run the command — access activates
   server-side automatically; no re-login is needed.
 - A 401 on a previously working key usually means key rotation: Finterm keeps one

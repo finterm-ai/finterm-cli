@@ -8,10 +8,14 @@
  * callers keep the wire shape untouched.
  *
  * `SUBSCRIPTION_REQUIRED` (402) is the flagship case: the paywall block
- * renders the plan situation, the price-and-trial line, and the upgrade URL
- * (preferring the envelope's machine-readable `upgrade_url`), then offers to
- * open the browser when the terminal is interactive. No polling loop follows:
- * the next invocation re-checks entitlement server-side by construction.
+ * renders the server's message and the upgrade URL (preferring the envelope's
+ * machine-readable `upgrade_url`), then offers to open the browser when the
+ * terminal is interactive. No polling loop follows: the next invocation
+ * re-checks entitlement server-side by construction.
+ *
+ * The CLI never states offer terms (price, trial length, card requirement) —
+ * those are owned by the server message and the pricing page, so offer changes
+ * never require a CLI release.
  */
 
 import type { CommandContext } from './context.js';
@@ -20,13 +24,6 @@ import { ICONS } from './output.js';
 
 /** Fallback when a 402 envelope predates the machine-readable field. */
 export const UPGRADE_URL_FALLBACK = 'https://app.finterm.ai/pricing';
-
-/**
- * The offer line (owned by finterm-product-marketing.md §Pricing; the funnel
- * spec's content check keeps it aligned with the site, app, and quickstart).
- */
-export const PRICE_TRIAL_LINE =
-  '$150/month launch rate (reg. $200/month) — 3-day free trial, card required.';
 
 /** Post-checkout pointer: access resumes without any CLI-side re-auth. */
 export const RESUME_LINE = 'After checkout, re-run this command — access resumes automatically.';
@@ -58,13 +55,7 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
     case 'SUBSCRIPTION_REQUIRED':
       return {
         title: 'Finterm Pro required',
-        remedy: [
-          '',
-          PRICE_TRIAL_LINE,
-          `Upgrade: ${error.upgrade_url ?? UPGRADE_URL_FALLBACK}`,
-          '',
-          RESUME_LINE,
-        ],
+        remedy: ['', `Upgrade: ${error.upgrade_url ?? UPGRADE_URL_FALLBACK}`, '', RESUME_LINE],
       };
     case 'TOKEN_MISSING':
       return {

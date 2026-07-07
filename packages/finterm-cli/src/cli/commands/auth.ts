@@ -46,8 +46,9 @@ function isoDate(epochMs: number): string {
 
 /**
  * The plan line for login/status output (funnel spec C2/C4): free accounts get
- * the trial pointer; entitled accounts see their plan/trial state. Exported
- * for tests.
+ * the upgrade pointer; entitled accounts see their plan/trial state. Offer
+ * terms are never stated here — the pricing page owns them, so offer changes
+ * never require a CLI release. Exported for tests.
  */
 export function planStateLines(summary: {
   hasPro: boolean;
@@ -63,7 +64,7 @@ export function planStateLines(summary: {
         `Update your card to restore access: ${upgradeUrl}`,
       ];
     }
-    return ['Plan: free — API access requires Pro.', `Start your 3-day trial: ${upgradeUrl}`];
+    return ['Plan: free — API access requires Pro.', `Upgrade: ${upgradeUrl}`];
   }
   if (summary.status === 'trialing' && summary.trialEndsAt) {
     return [`Plan: Pro (trial ends ${isoDate(summary.trialEndsAt)})`];
@@ -220,13 +221,11 @@ class AuthLoginHandler extends BaseCommand {
           console.log(`  Token ID: ${tokenResult.tokenId}`);
         }
         console.log('');
-        // Plan-aware close (funnel spec C2): free logins get the trial
+        // Plan-aware close (funnel spec C2): free logins get the upgrade
         // pointer, entitled logins their plan/trial state; older servers
         // without the poll entitlement fall back to the generic line.
         if (entitlement && !entitlement.hasPro) {
-          console.log(
-            `Not on Pro yet? Start your 3-day trial: ${entitlement.upgradeUrl ?? UPGRADE_URL_FALLBACK}`
-          );
+          console.log(`Not on Pro yet? Upgrade: ${entitlement.upgradeUrl ?? UPGRADE_URL_FALLBACK}`);
         } else if (entitlement) {
           for (const line of planStateLines(entitlement)) {
             console.log(line);

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   humanWireErrorLines,
   KEY_ROTATION_LINE,
-  PRICE_TRIAL_LINE,
   RESUME_LINE,
   UPGRADE_URL_FALLBACK,
 } from './human-error.js';
@@ -21,9 +20,17 @@ describe('humanWireErrorLines', () => {
     expect(lines[0]).toContain('Finterm Pro required');
     expect(text).toContain('A Finterm Pro subscription is required');
     expect(text).toContain('(code: SUBSCRIPTION_REQUIRED)');
-    expect(text).toContain(PRICE_TRIAL_LINE);
     expect(text).toContain('Upgrade: https://app.finterm.ai/pricing');
     expect(text).toContain(RESUME_LINE);
+  });
+
+  it('adds no offer terms of its own — price/trial wording is server-owned', () => {
+    const text = humanWireErrorLines({
+      code: 'SUBSCRIPTION_REQUIRED',
+      message: 'A Finterm Pro subscription is required to use the API.',
+      upgrade_url: 'https://app.finterm.ai/pricing',
+    }).join('\n');
+    expect(text).not.toMatch(/\$\d|\/month|trial|card/i);
   });
 
   it('falls back to the known upgrade URL when the envelope predates the field', () => {
