@@ -12,6 +12,8 @@ import { formatAsJson, formatAsYaml } from '../../cli-io/output/formatter.js';
 import { APIRequestError } from '../../lib/api-client.js';
 import type { CommandContext } from './context.js';
 import { CLIError } from './errors.js';
+import { printHumanWireError } from './human-error.js';
+import type { OutputManager } from './output.js';
 
 /** Serialization format for a wire result printed to stdout. */
 export type ApiOutputFormat = 'json' | 'yaml';
@@ -43,6 +45,11 @@ export interface FintermErrorResult {
   error: {
     code: string;
     message: string;
+    /**
+     * Machine-readable upgrade URL, sent by the server on
+     * `SUBSCRIPTION_REQUIRED` (402) — the paywall consumes it structurally.
+     */
+    upgrade_url?: string;
   };
 }
 
@@ -241,4 +248,27 @@ export function renderFintermWireResult(
     return `${WIRE_RESULT_YAML_BANNER}\n${formatAsYaml(result)}`;
   }
   return formatAsJson(result);
+}
+
+/**
+ * Print a wire result the way the funnel spec's C0 requires: machine formats
+ * (`--json` / `--format`) always emit the wire shape on stdout, and a wire
+ * ERROR in default (human) mode renders as the concise human block on stderr
+ * instead of the raw envelope — with the 402 paywall as the flagship case.
+ * Also maps an error result to a failing exit code.
+ */
+export async function printFintermWireResult(
+  ctx: CommandContext,
+  output: OutputManager,
+  result: FintermWireResult<unknown>,
+  options: ApiOutputOptions = {}
+): Promise<void> {
+  if (isFintermWireErrorResult(result) && !hasRequestedApiOutputFormat(ctx, options)) {
+    await printHumanWireError(ctx, output, result.error);
+  } else {
+    output.data(result, () => {
+      console.log(renderFintermWireResult(result, getRequestedApiOutputFormat(ctx, options)));
+    });
+  }
+  markFintermWireErrorExitCode(result);
 }

@@ -156,12 +156,52 @@ export interface LoginStartResponse {
   error?: { code: string; message: string };
 }
 
+/**
+ * Plan/entitlement summary the server attaches to an authorized login poll
+ * (funnel spec B3): lets the post-login message branch on plan without a
+ * second call.
+ */
+export interface LoginEntitlementSummary {
+  plan: 'pro' | 'free';
+  hasPro: boolean;
+  status: string | null;
+  /** Epoch ms the trial ends, when status is 'trialing'. */
+  trialEndsAt: number | null;
+  /** Conversion pointer, present only when not entitled. */
+  upgradeUrl?: string;
+}
+
 /** Login poll response */
 export interface LoginPollResponse {
   success: boolean;
   status?: 'pending' | 'authorized' | 'denied' | 'expired';
   token?: string;
   tokenId?: string;
+  /** Present when status is 'authorized' (servers may predate it). */
+  entitlement?: LoginEntitlementSummary;
+  error?: { code: string; message: string };
+}
+
+/**
+ * `GET /api/v1/account` payload — the authenticated whoami/entitlement read
+ * (funnel spec B3/C4). Snake_case per the /api/v1 wire convention.
+ */
+export interface AccountData {
+  email: string | null;
+  plan: 'pro' | 'free';
+  has_pro: boolean;
+  subscription_status: string | null;
+  trial_ends_at: number | null;
+  current_period_end: number | null;
+  cancel_at_period_end: boolean;
+  /** Conversion pointer, present only when not entitled. */
+  upgrade_url?: string;
+}
+
+/** Wire envelope for the account read: `{finterm, data}` on success. */
+export interface AccountWireResponse {
+  finterm?: { schema: string; tool: string; args: Record<string, unknown>; request_id?: string };
+  data?: AccountData;
   error?: { code: string; message: string };
 }
 
@@ -561,6 +601,13 @@ export interface FintermAPIClient {
   loginStart(deviceName?: string): Promise<LoginStartResponse>;
   loginPoll(sessionId: string, pollSecret: string): Promise<LoginPollResponse>;
 
+  /**
+   * Authenticated whoami/entitlement read (`GET /api/v1/account`) — works for
+   * free accounts (token required, Pro NOT required); never cached, so plan
+   * state is fresh right after a checkout.
+   */
+  account(): Promise<AccountWireResponse>;
+
   // SEC endpoints (token required)
   secFilingsSearch(params: {
     ticker: string;
@@ -889,6 +936,12 @@ class LiveFintermAPIClient implements FintermAPIClient {
   // Auth endpoints
   async loginStart(deviceName?: string): Promise<LoginStartResponse> {
     return this.request('POST', '/cli/login/start', { deviceName });
+  }
+
+  async account(): Promise<AccountWireResponse> {
+    // GET requests are never cached (see request()), which matters here: plan
+    // state must be fresh immediately after a checkout.
+    return this.request('GET', '/api/v1/account', undefined, AUTHENTICATED_REQUEST_OPTIONS);
   }
 
   async loginPoll(sessionId: string, pollSecret: string): Promise<LoginPollResponse> {

@@ -77,7 +77,7 @@ Secure token-based authentication with Finterm services:
 ```bash
 finterm auth login   # Authenticate; rotates the single account API key
 finterm auth logout  # Sign out
-finterm auth status  # Check source, token id, and masked key
+finterm auth status  # Check account email, plan/trial state, and the stored key
 ```
 
 ### Developer Tools
@@ -107,7 +107,7 @@ finterm auth status  # Check source, token id, and masked key
 ```bash
 finterm auth login          # Sign in and rotate the account API key
 finterm auth logout         # Sign out
-finterm auth status         # Check source, token id, and masked key
+finterm auth status         # Check account email, plan/trial state, and the stored key
 ```
 
 `finterm auth login` opens the browser by default and prints the URL in the terminal as
