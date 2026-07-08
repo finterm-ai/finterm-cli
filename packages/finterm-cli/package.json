@@ -1,6 +1,6 @@
 {
   "name": "@finterm-ai/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Command-line interface for Finterm financial research and Dataroom workflows",
   "license": "AGPL-3.0-or-later",
   "author": "Finterm <contact@finterm.ai>",

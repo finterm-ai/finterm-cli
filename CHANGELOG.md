@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.1
+
+### Improvements
+
+- API errors in the default (human) output mode now render as a concise block on
+  stderr — title, message, error code, and remedy — instead of the raw
+  `{finterm,error}` JSON envelope. `--json`/`--format` callers keep the wire shape on
+  stdout unchanged.
+- `SUBSCRIPTION_REQUIRED` (402) renders a paywall block with the server's message and
+  the machine-readable `error.upgrade_url`, and offers to open the upgrade page in the
+  browser on an interactive terminal — never for agents, CI, or `--non-interactive`.
+  After checkout, re-running the command resumes access automatically.
+- `finterm auth login` closes with plan-aware messaging from the login entitlement
+  summary; older servers keep the generic line.
+- `finterm auth status` performs a server entitlement check and reports the account
+  email and plan/trial state, names a rotated key (401) as the
+  one-active-key-per-account cause, and falls back to the local credential readout
+  when the server is unreachable.
+- Invalid, expired, or revoked token errors explain the one-active-key-per-account
+  rotation cause and point at `finterm auth login`.
+- Agent guidance (`SKILL.md`, prime, brief) covers the paid model: the 402
+  relay-don't-retry rule, `upgrade_url`, and 401 key-rotation recovery.
+
 ## 0.2.0
 
 ### Features
