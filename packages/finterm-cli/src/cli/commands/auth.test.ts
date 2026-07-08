@@ -16,7 +16,12 @@ describe('planStateLines (C2/C4 plan-aware messaging)', () => {
   });
 
   it('falls back to the known upgrade URL when the server sent none', () => {
-    const lines = planStateLines({ hasPro: false, status: null, trialEndsAt: null });
+    const lines = planStateLines({
+      hasPro: false,
+      status: null,
+      trialEndsAt: null,
+      upgradeUrl: null,
+    });
     expect(lines[1]).toContain('https://app.finterm.ai/pricing');
   });
 
@@ -25,14 +30,15 @@ describe('planStateLines (C2/C4 plan-aware messaging)', () => {
       hasPro: true,
       status: 'trialing',
       trialEndsAt: Date.UTC(2026, 6, 10, 12),
+      upgradeUrl: null,
     });
     expect(lines).toEqual(['Plan: Pro (trial ends 2026-07-10)']);
   });
 
   it('shows plain Pro for an active subscription', () => {
-    expect(planStateLines({ hasPro: true, status: 'active', trialEndsAt: null })).toEqual([
-      'Plan: Pro',
-    ]);
+    expect(
+      planStateLines({ hasPro: true, status: 'active', trialEndsAt: null, upgradeUrl: null })
+    ).toEqual(['Plan: Pro']);
   });
 
   it('reports a failed payment with the restore pointer', () => {

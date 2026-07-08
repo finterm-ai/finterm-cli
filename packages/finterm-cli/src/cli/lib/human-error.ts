@@ -18,6 +18,8 @@
  * never require a CLI release.
  */
 
+import { createInterface } from 'node:readline/promises';
+
 import type { CommandContext } from './context.js';
 import type { OutputManager } from './output.js';
 import { ICONS } from './output.js';
@@ -123,7 +125,6 @@ function canPromptForBrowser(ctx: CommandContext): boolean {
 
 /** Minimal y/N confirm on stderr, so stdout stays clean for data. */
 async function confirmOnStderr(question: string): Promise<boolean> {
-  const { createInterface } = await import('node:readline/promises');
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
     const answer = await rl.question(question);

@@ -144,6 +144,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Error body shared by every wire response envelope. */
+export interface WireErrorBody {
+  code: string;
+  message: string;
+}
+
 /** Login start response */
 export interface LoginStartResponse {
   success: boolean;
@@ -153,7 +159,7 @@ export interface LoginStartResponse {
   loginUrl?: string;
   pollUrl?: string;
   expiresAt?: number;
-  error?: { code: string; message: string };
+  error?: WireErrorBody;
 }
 
 /**
@@ -179,7 +185,7 @@ export interface LoginPollResponse {
   tokenId?: string;
   /** Present when status is 'authorized' (servers may predate it). */
   entitlement?: LoginEntitlementSummary;
-  error?: { code: string; message: string };
+  error?: WireErrorBody;
 }
 
 /**
@@ -202,14 +208,14 @@ export interface AccountData {
 export interface AccountWireResponse {
   finterm?: { schema: string; tool: string; args: Record<string, unknown>; request_id?: string };
   data?: AccountData;
-  error?: { code: string; message: string };
+  error?: WireErrorBody;
 }
 
 /** Generic API response wrapper */
 export interface APIResponse<T> {
   success: boolean;
   data?: T;
-  error?: { code: string; message: string };
+  error?: WireErrorBody;
 }
 
 export type BundleDeliveryMode =

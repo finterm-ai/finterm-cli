@@ -35,8 +35,8 @@ const DEFAULT_SESSION_EXPIRY_MS = 15 * 60 * 1000;
 interface LoginTokenResult {
   token: string;
   tokenId?: string;
-  /** Plan summary from the authorized poll payload (absent on older servers). */
-  entitlement?: LoginEntitlementSummary;
+  /** Plan summary from the authorized poll payload; null on older servers. */
+  entitlement: LoginEntitlementSummary | null;
 }
 
 /** Render an epoch-ms timestamp as a timezone-stable ISO date (YYYY-MM-DD). */
@@ -45,20 +45,48 @@ function isoDate(epochMs: number): string {
 }
 
 /**
+ * Normalized plan state for rendering, converted from the wire shapes at the
+ * boundary: every field is required, and absent wire fields become explicit
+ * nulls so no caller can accidentally omit one.
+ */
+export interface PlanState {
+  hasPro: boolean;
+  status: string | null;
+  trialEndsAt: number | null;
+  /** Conversion pointer; null when entitled or when the server sent none. */
+  upgradeUrl: string | null;
+}
+
+/** Normalize the login-poll entitlement summary (camelCase wire) to PlanState. */
+function planStateFromEntitlement(summary: LoginEntitlementSummary): PlanState {
+  return {
+    hasPro: summary.hasPro,
+    status: summary.status,
+    trialEndsAt: summary.trialEndsAt,
+    upgradeUrl: summary.upgradeUrl ?? null,
+  };
+}
+
+/** Normalize the `/api/v1/account` payload (snake_case wire) to PlanState. */
+function planStateFromAccount(account: AccountData): PlanState {
+  return {
+    hasPro: account.has_pro,
+    status: account.subscription_status,
+    trialEndsAt: account.trial_ends_at,
+    upgradeUrl: account.upgrade_url ?? null,
+  };
+}
+
+/**
  * The plan line for login/status output (funnel spec C2/C4): free accounts get
  * the upgrade pointer; entitled accounts see their plan/trial state. Offer
  * terms are never stated here — the pricing page owns them, so offer changes
  * never require a CLI release. Exported for tests.
  */
-export function planStateLines(summary: {
-  hasPro: boolean;
-  status: string | null;
-  trialEndsAt: number | null;
-  upgradeUrl?: string;
-}): string[] {
-  if (!summary.hasPro) {
-    const upgradeUrl = summary.upgradeUrl ?? UPGRADE_URL_FALLBACK;
-    if (summary.status === 'past_due' || summary.status === 'unpaid') {
+export function planStateLines(plan: PlanState): string[] {
+  if (!plan.hasPro) {
+    const upgradeUrl = plan.upgradeUrl ?? UPGRADE_URL_FALLBACK;
+    if (plan.status === 'past_due' || plan.status === 'unpaid') {
       return [
         'Plan: payment failed — API access is paused.',
         `Update your card to restore access: ${upgradeUrl}`,
@@ -66,8 +94,8 @@ export function planStateLines(summary: {
     }
     return ['Plan: free — API access requires Pro.', `Upgrade: ${upgradeUrl}`];
   }
-  if (summary.status === 'trialing' && summary.trialEndsAt) {
-    return [`Plan: Pro (trial ends ${isoDate(summary.trialEndsAt)})`];
+  if (plan.status === 'trialing' && plan.trialEndsAt) {
+    return [`Plan: Pro (trial ends ${isoDate(plan.trialEndsAt)})`];
   }
   return ['Plan: Pro'];
 }
@@ -210,7 +238,7 @@ class AuthLoginHandler extends BaseCommand {
       {
         authenticated: true,
         tokenId: tokenResult.tokenId ?? null,
-        entitlement: entitlement ?? null,
+        entitlement,
         message: 'Successfully logged in',
       },
       () => {
@@ -224,10 +252,11 @@ class AuthLoginHandler extends BaseCommand {
         // Plan-aware close (funnel spec C2): free logins get the upgrade
         // pointer, entitled logins their plan/trial state; older servers
         // without the poll entitlement fall back to the generic line.
-        if (entitlement && !entitlement.hasPro) {
-          console.log(`Not on Pro yet? Upgrade: ${entitlement.upgradeUrl ?? UPGRADE_URL_FALLBACK}`);
-        } else if (entitlement) {
-          for (const line of planStateLines(entitlement)) {
+        const plan = entitlement ? planStateFromEntitlement(entitlement) : null;
+        if (plan && !plan.hasPro) {
+          console.log(`Not on Pro yet? Upgrade: ${plan.upgradeUrl ?? UPGRADE_URL_FALLBACK}`);
+        } else if (plan) {
+          for (const line of planStateLines(plan)) {
             console.log(line);
           }
           console.log('You can now use finterm commands that require authentication.');
@@ -272,7 +301,7 @@ class AuthLoginHandler extends BaseCommand {
                 return {
                   token: response.token,
                   tokenId: response.tokenId,
-                  entitlement: response.entitlement,
+                  entitlement: response.entitlement ?? null,
                 };
               }
               // Authorized but the token was already consumed by another retrieval;
@@ -413,12 +442,7 @@ class AuthStatusHandler extends BaseCommand {
           console.log('  Token ID: unavailable for FINTERM_API_KEY');
         }
         if (account) {
-          for (const line of planStateLines({
-            hasPro: account.has_pro,
-            status: account.subscription_status,
-            trialEndsAt: account.trial_ends_at,
-            ...(account.upgrade_url !== undefined && { upgradeUrl: account.upgrade_url }),
-          })) {
+          for (const line of planStateLines(planStateFromAccount(account))) {
             console.log(`  ${line}`);
           }
         } else if (check.state === 'unavailable') {

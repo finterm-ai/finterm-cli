@@ -50,7 +50,7 @@ describe('printFintermWireResult (C0 routing)', () => {
 
   it('renders a wire ERROR as the human block on stderr in default mode', async () => {
     const ctx = makeCtx();
-    await printFintermWireResult(ctx, new OutputManager(ctx), PAYWALL_RESULT);
+    await printFintermWireResult(ctx, new OutputManager(ctx), PAYWALL_RESULT, {});
 
     // Nothing on stdout: the envelope is not printed in human mode.
     expect(logSpy).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('printFintermWireResult (C0 routing)', () => {
 
   it('keeps the wire envelope under the global --json flag', async () => {
     const ctx = makeCtx({ json: true });
-    await printFintermWireResult(ctx, new OutputManager(ctx), PAYWALL_RESULT);
+    await printFintermWireResult(ctx, new OutputManager(ctx), PAYWALL_RESULT, {});
 
     const printed = JSON.parse(logSpy.mock.calls[0]?.[0] as string) as typeof PAYWALL_RESULT;
     expect(printed.error?.upgrade_url).toBe('https://app.finterm.ai/pricing');
@@ -84,7 +84,7 @@ describe('printFintermWireResult (C0 routing)', () => {
 
   it('prints success results as the wire envelope in every mode', async () => {
     const ctx = makeCtx();
-    await printFintermWireResult(ctx, new OutputManager(ctx), SUCCESS_RESULT);
+    await printFintermWireResult(ctx, new OutputManager(ctx), SUCCESS_RESULT, {});
 
     expect(errorSpy).not.toHaveBeenCalled();
     const printed = JSON.parse(logSpy.mock.calls[0]?.[0] as string) as typeof SUCCESS_RESULT;

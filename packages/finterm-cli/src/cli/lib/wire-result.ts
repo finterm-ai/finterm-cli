@@ -261,7 +261,7 @@ export async function printFintermWireResult(
   ctx: CommandContext,
   output: OutputManager,
   result: FintermWireResult<unknown>,
-  options: ApiOutputOptions = {}
+  options: ApiOutputOptions
 ): Promise<void> {
   if (isFintermWireErrorResult(result) && !hasRequestedApiOutputFormat(ctx, options)) {
     await printHumanWireError(ctx, output, result.error);
