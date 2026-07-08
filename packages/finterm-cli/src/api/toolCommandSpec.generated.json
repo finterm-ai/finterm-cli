@@ -488,13 +488,6 @@
         "negate": false
       },
       {
-        "flags": "--as-of-date <date>",
-        "description": "Resource snapshot date (YYYY-MM-DD)",
-        "required": false,
-        "takesValue": true,
-        "negate": false
-      },
-      {
         "flags": "--delivery-mode <mode>",
         "description": "Requested delivery mode",
         "required": false,

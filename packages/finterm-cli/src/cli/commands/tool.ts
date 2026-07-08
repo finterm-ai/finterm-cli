@@ -605,7 +605,6 @@ const technicalIndicatorsCommand = new Command('technical_indicators')
 const tickerDataCommand = new Command('ticker_data')
   .argument('<ticker>', 'Company ticker, e.g. AAPL')
   .option('--company-name <name>', 'Company name for display and normalization')
-  .option('--as-of-date <date>', 'Resource snapshot date (YYYY-MM-DD)', parseAsOfDate)
   .addOption(
     new Option('--delivery-mode <mode>', 'Requested delivery mode').choices([
       'inline_result',
@@ -620,7 +619,6 @@ const tickerDataCommand = new Command('ticker_data')
       ticker: string,
       options: {
         companyName?: string;
-        asOfDate?: string;
         deliveryMode?: BundleDeliveryMode;
         param?: string[];
       } & ApiOutputOptions,
@@ -635,7 +633,6 @@ const tickerDataCommand = new Command('ticker_data')
         {
           ticker,
           companyName: options.companyName,
-          asOfDate: options.asOfDate,
           deliveryMode: options.deliveryMode,
           parameters: parseBundleParameters(options.param ?? null),
         },

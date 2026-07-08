@@ -276,7 +276,6 @@ export interface BundleRunRequest {
   ticker?: string;
   companyName?: string;
   mode?: 'placeholder' | 'live';
-  asOfDate?: string;
   deliveryMode?: BundleDeliveryMode;
   parameters?: Record<string, unknown>;
 }
@@ -1153,11 +1152,12 @@ class LiveFintermAPIClient implements FintermAPIClient {
     bundleName: string,
     params: BundleRunRequest
   ): Promise<APIResponse<BundleRunData>> {
+    // Exactly the public bundle-run contract keys (bundleRunRequestSchema is
+    // strict server-side): a key the contract lacks is a 400, not a no-op.
     const body = {
       ticker: params.ticker,
       company_name: params.companyName,
       mode: params.mode,
-      as_of_date: params.asOfDate,
       delivery_mode: params.deliveryMode,
       parameters: params.parameters,
     };

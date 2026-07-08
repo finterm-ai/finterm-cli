@@ -80,7 +80,6 @@ function normalizeMockBundleRequest(
     ticker: params.ticker ? params.ticker.toUpperCase() : null,
     companyName: params.companyName ?? null,
     mode: params.mode ?? 'placeholder',
-    asOfDate: params.asOfDate ?? null,
     deliveryMode: params.deliveryMode ?? entry.deliveryModes[0],
     parameters: params.parameters ?? {},
   };
