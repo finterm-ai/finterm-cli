@@ -17,7 +17,7 @@ finterm auth login
 
 # Run a company web research bundle and sync its output locally.
 # Live runs require the fiscal-period params (current and prior quarter/year).
-finterm bundle run company_web_research AAPL \
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/aapl
@@ -43,9 +43,9 @@ Dataroom sync:
 
 ```bash
 finterm bundle catalog                       # List available research bundles
-finterm bundle describe company_web_research # Show one bundle's descriptor
+finterm bundle describe company_deep_research # Show one bundle's descriptor
 # Start a live web research run (fiscal-period params are required):
-finterm bundle run company_web_research AAPL \
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle status|wait|result <runId>    # Inspect or poll a run
 finterm bundle download <runId> --room <dir> # Sync published run files into a local room
@@ -54,7 +54,7 @@ finterm dataroom info|list|files|search|read <room>
                                              # Read and search a downloaded Dataroom
 ```
 
-The only published bundle is `company_web_research`.
+The only published bundle is `company_deep_research`.
 
 ### Point Data Tools
 

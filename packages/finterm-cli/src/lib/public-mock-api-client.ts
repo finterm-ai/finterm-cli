@@ -46,17 +46,17 @@ const MOCK_BUNDLE_CATALOG: BundleCatalogData = {
       requiredScopes: ['bundle:fundamentals', 'runs:create'],
     },
     {
-      name: 'company_web_research',
-      descriptorId: 'company_web_research',
+      name: 'company_deep_research',
+      descriptorId: 'company_deep_research',
       toolFamily: 'package',
       summary: 'Company web research bundle with optional Dataroom delivery.',
       execution: 'async',
       lifecycle: 'placeholder',
       deliveryModes: ['summary_json', 'dataroom_sync'],
       artifactTypes: ['bundle_manifest', 'dataroom_manifest', 'source_cache', 'run_manifest'],
-      runEndpoint: '/api/v1/bundles/company_web_research/runs',
-      inputSchemaRef: '/api/v1/catalog/bundles/company_web_research/input-schema',
-      outputSchemaRef: '/api/v1/catalog/bundles/company_web_research/output-schema',
+      runEndpoint: '/api/v1/bundles/company_deep_research/runs',
+      inputSchemaRef: '/api/v1/catalog/bundles/company_deep_research/input-schema',
+      outputSchemaRef: '/api/v1/catalog/bundles/company_deep_research/output-schema',
       requiredScopes: ['bundle:web_research', 'runs:create'],
     },
   ],
@@ -91,7 +91,7 @@ function normalizeMockBundleRequest(
  * queries statelessly, without tracking issued runs.
  */
 function parseMockRunId(runId: string): { bundleName: string; ticker: string } | null {
-  const match = /^run_ph_mock_(company_web_research|ticker_data)_([A-Z0-9.]+)$/.exec(runId);
+  const match = /^run_ph_mock_(company_deep_research|ticker_data)_([A-Z0-9.]+)$/.exec(runId);
   if (!match) {
     return null;
   }
