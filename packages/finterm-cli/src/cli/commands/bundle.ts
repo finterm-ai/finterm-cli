@@ -86,7 +86,7 @@ const MIN_PRINTABLE_ARTIFACT_COUNT = 1;
 /** Exit code used when a completed command reports a failed run outcome. */
 const COMMAND_FAILURE_EXIT_CODE = 1;
 
-const COMPANY_WEB_RESEARCH_BUNDLE = 'company_web_research';
+const COMPANY_WEB_RESEARCH_BUNDLE = 'company_deep_research';
 
 export const TICKER_DATA_BUNDLE = 'ticker_data';
 
@@ -456,7 +456,7 @@ const catalogCommand = new Command('catalog')
 
 const describeCommand = new Command('describe')
   .description('Show one company research bundle descriptor')
-  .argument('<bundleName>', 'Bundle public name, e.g. company_web_research')
+  .argument('<bundleName>', 'Bundle public name, e.g. company_deep_research')
   .addOption(createApiOutputFormatOption())
   .action(async (bundleName: string, options: ApiOutputOptions, command: Command) => {
     assertPublishedBundleName(bundleName);
@@ -471,7 +471,7 @@ const describeCommand = new Command('describe')
 
 const runCommand = new Command('run')
   .description('Create an authenticated company research bundle run')
-  .argument('<bundleName>', 'Bundle public name, e.g. company_web_research')
+  .argument('<bundleName>', 'Bundle public name, e.g. company_deep_research')
   .argument('<ticker>', 'Company ticker, e.g. AAPL')
   .option('--company-name <name>', 'Company name for display and normalization')
   .addOption(

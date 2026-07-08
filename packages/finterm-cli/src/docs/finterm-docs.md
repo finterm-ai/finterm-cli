@@ -30,7 +30,7 @@ finterm setup --check   # Verify agent setup
 finterm setup           # Install supported agent setup
 finterm skill --brief   # Short agent workflow
 finterm tool --help     # Public point-tool surface
-finterm bundle run company_web_research AAPL \
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 ```
 
@@ -174,13 +174,13 @@ Tool roles:
 
 ### Bundle Commands
 
-Two bundles are published: `ticker_data` and `company_web_research`.
+Two bundles are published: `ticker_data` and `company_deep_research`.
 
 `ticker_data` aggregates earnings, guidance, prices, ratios, options sentiment, short
 pressure, technicals, statements, and pre-earnings context for one ticker; it needs no
 extra parameters (`finterm tool ticker_data AAPL` is shorthand for a run).
 
-A `company_web_research` run executes live and requires four fiscal-period parameters:
+A `company_deep_research` run executes live and requires four fiscal-period parameters:
 `q`, `fy`, `prev_q`, and `prev_fy` (the current and prior fiscal quarter and year).
 A run executes live and requires four fiscal-period parameters: `q`, `fy`, `prev_q`, and
 `prev_fy` (the current and prior fiscal quarter and year).
@@ -190,8 +190,8 @@ Omitting any of them fails before the API is called.
 finterm bundle catalog
 finterm bundle describe ticker_data
 finterm bundle run ticker_data AAPL
-finterm bundle describe company_web_research
-finterm bundle run company_web_research AAPL \
+finterm bundle describe company_deep_research
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle result <runId>

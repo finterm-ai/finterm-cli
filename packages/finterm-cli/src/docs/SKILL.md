@@ -75,7 +75,7 @@ Use `--json` when another tool or agent needs machine-readable output.
 
 ## Bundles
 
-Two bundles are published: `ticker_data` and `company_web_research`.
+Two bundles are published: `ticker_data` and `company_deep_research`.
 
 Use `ticker_data` for the full fundamentals snapshot of one ticker; it needs no extra
 parameters, and `finterm tool ticker_data <ticker>` is shorthand for starting a run:
@@ -86,14 +86,14 @@ finterm bundle wait <runId>
 finterm bundle result <runId>
 ```
 
-Use `company_web_research` when the user asks for a company research packet.
+Use `company_deep_research` when the user asks for a company research packet.
 A run executes live and requires the fiscal-period parameters `q`, `fy`, `prev_q`, and
 `prev_fy`; without them the run is rejected before it starts:
 
 ```bash
 finterm bundle catalog
-finterm bundle describe company_web_research
-finterm bundle run company_web_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
+finterm bundle describe company_deep_research
+finterm bundle run company_deep_research META --param q=Q4 --param fy=2024 --param prev_q=Q3 --param prev_fy=2024
 finterm bundle status <runId>
 finterm bundle wait <runId>
 finterm bundle result <runId>
@@ -140,8 +140,8 @@ Room-mutating and authoring verbs are not part of the public `finterm dataroom` 
 
 - `finterm bundle catalog` - List published bundles
 - `finterm bundle run ticker_data <ticker>` - Start a full ticker snapshot run
-- `finterm bundle describe company_web_research` - Inspect the web research bundle
-- `finterm bundle run company_web_research <ticker> --param q=.. --param fy=.. --param prev_q=.. --param prev_fy=..`
+- `finterm bundle describe company_deep_research` - Inspect the web research bundle
+- `finterm bundle run company_deep_research <ticker> --param q=.. --param fy=.. --param prev_q=.. --param prev_fy=..`
   \- Start a live run
 - `finterm bundle status <runId>` - Show run state and next action
 - `finterm bundle wait <runId>` - Wait for completion
@@ -192,6 +192,6 @@ Use `--verbose` or `--debug` when checking live API behavior.
   needs Node >=22.12
 - Start with `finterm auth status`, `finterm setup --check`, and `finterm tool --help`
 - Use only the published point-tool ids listed above
-- Run web research packets with `finterm bundle run company_web_research <ticker>` plus
+- Run web research packets with `finterm bundle run company_deep_research <ticker>` plus
   the `q`, `fy`, `prev_q`, and `prev_fy` params
 - Use `finterm dataroom info|list|files|search|read` for local Datarooms
