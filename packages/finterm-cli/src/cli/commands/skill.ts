@@ -12,25 +12,11 @@
 
 import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 
 import { BaseCommand } from '../lib/base-command.js';
+import { getDistDir } from '../lib/dist-dir.js';
 import { isExpectedFsError } from '../lib/errors.js';
-
-/**
- * Resolve the bundled `dist` directory from the running binary's location, falling back
- * to the in-repo path so the command works both when installed and when run from source.
- */
-function getDistDir(): string {
-  const scriptPath = process.argv[1] || '';
-  const scriptDir = dirname(scriptPath);
-
-  if (scriptDir.endsWith('/dist') || scriptDir.endsWith('\\dist')) {
-    return scriptDir;
-  }
-
-  return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
-}
 
 /**
  * Load `SKILL.md`, trying the installed copy then source-tree fallbacks, and returning a

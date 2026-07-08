@@ -4,28 +4,14 @@
 
 import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import { BaseCommand } from '../lib/base-command.js';
+import { getDistDir } from '../lib/dist-dir.js';
 import { isExpectedFsError } from '../lib/errors.js';
 import { getColorOptionFromArgv } from '../lib/output.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { showInPager } from '../lib/pager.js';
-
-/**
- * Locate the bundled `dist/` directory by inspecting the running script's path, so docs
- * resolve whether the CLI runs from a built binary or from source during development.
- */
-function getDistDir(): string {
-  const scriptPath = process.argv[1] || '';
-  const scriptDir = dirname(scriptPath);
-
-  if (scriptDir.endsWith('/dist') || scriptDir.endsWith('\\dist')) {
-    return scriptDir;
-  }
-
-  return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
-}
 
 /**
  * Load the bundled documentation, trying the built location first and source paths as a

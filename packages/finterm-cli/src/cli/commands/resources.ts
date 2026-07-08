@@ -6,24 +6,10 @@
  */
 
 import { Command } from 'commander';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
+import { getDistDir } from '../lib/dist-dir.js';
 import { DocCommandHandler, type DocCommandOptions } from '../lib/doc-command-handler.js';
-
-/**
- * Resolve the bundled `dist` directory from the running binary's location, falling back
- * to the in-repo path so the command works both when installed and when run from source.
- */
-function getDistDir(): string {
-  const scriptPath = process.argv[1] || '';
-  const scriptDir = dirname(scriptPath);
-
-  if (scriptDir.endsWith('/dist') || scriptDir.endsWith('\\dist')) {
-    return scriptDir;
-  }
-
-  return join(process.cwd(), 'packages', 'finterm-cli', 'dist');
-}
 
 /** Primary (installed) resource search location, rooted at the bundled `dist` dir. */
 function getResourcePaths(): { paths: string[]; baseDir: string } {
