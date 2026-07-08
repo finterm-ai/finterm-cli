@@ -604,7 +604,7 @@ export interface FintermAPIClient {
   clearToken(): void;
 
   // Auth endpoints (no token required)
-  loginStart(deviceName?: string): Promise<LoginStartResponse>;
+  loginStart(deviceName: string): Promise<LoginStartResponse>;
   loginPoll(sessionId: string, pollSecret: string): Promise<LoginPollResponse>;
 
   /**
@@ -940,7 +940,7 @@ class LiveFintermAPIClient implements FintermAPIClient {
   }
 
   // Auth endpoints
-  async loginStart(deviceName?: string): Promise<LoginStartResponse> {
+  async loginStart(deviceName: string): Promise<LoginStartResponse> {
     return this.request('POST', '/cli/login/start', { deviceName });
   }
 

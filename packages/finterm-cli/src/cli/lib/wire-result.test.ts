@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APIRequestError } from '../../lib/api-client.js';
 import type { CommandContext } from './context.js';
 import { OutputManager } from './output.js';
-import { printFintermWireResult, type FintermWireResult } from './wire-result.js';
+import {
+  apiCallToFintermWireResult,
+  isFintermWireErrorResult,
+  printFintermWireResult,
+  type FintermWireResult,
+} from './wire-result.js';
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
   return {
@@ -90,5 +96,40 @@ describe('printFintermWireResult (C0 routing)', () => {
     const printed = JSON.parse(logSpy.mock.calls[0]?.[0] as string) as typeof SUCCESS_RESULT;
     expect(printed).toEqual(SUCCESS_RESULT);
     expect(process.exitCode).toBeUndefined();
+  });
+});
+
+describe('apiCallToFintermWireResult (fin-27bn upstream synthesis)', () => {
+  const FALLBACK = { schema: 'finterm.result:Test/v1', tool: 'test_tool', args: {} };
+
+  it('synthesizes an UPSTREAM_HTTP_<status> error for an envelope-less HTTP failure', async () => {
+    const result = await apiCallToFintermWireResult(() => {
+      throw new APIRequestError('HTTP 502', { status: 502 });
+    }, FALLBACK);
+
+    expect(isFintermWireErrorResult(result)).toBe(true);
+    if (isFintermWireErrorResult(result)) {
+      expect(result.error.code).toBe('UPSTREAM_HTTP_502');
+      expect(result.error.message).toContain('HTTP 502');
+    }
+  });
+
+  it('returns the server wire envelope untouched when the failure body carries one', async () => {
+    const body = {
+      finterm: FALLBACK,
+      error: { code: 'SUBSCRIPTION_REQUIRED', message: 'Pro required.' },
+    };
+    const result = await apiCallToFintermWireResult(() => {
+      throw new APIRequestError('HTTP 402', { status: 402, body });
+    }, FALLBACK);
+    expect(result).toEqual(body);
+  });
+
+  it('still throws non-HTTP failures', async () => {
+    await expect(
+      apiCallToFintermWireResult(() => {
+        throw new Error('socket hang up');
+      }, FALLBACK)
+    ).rejects.toThrow('socket hang up');
   });
 });

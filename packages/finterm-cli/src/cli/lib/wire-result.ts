@@ -12,7 +12,7 @@ import { formatAsJson, formatAsYaml } from '../../cli-io/output/formatter.js';
 import { APIRequestError } from '../../lib/api-client.js';
 import type { CommandContext } from './context.js';
 import { CLIError } from './errors.js';
-import { printHumanWireError } from './human-error.js';
+import { printHumanWireError, UPSTREAM_HTTP_CODE_PREFIX } from './human-error.js';
 import type { OutputManager } from './output.js';
 
 /** Serialization format for a wire result printed to stdout. */
@@ -188,7 +188,9 @@ export function toFintermWireResult<T>(
  *
  * A failed request whose body is itself a wire error (the server's structured
  * error) is returned as data rather than thrown, so callers can render it through
- * the same path as success; non-wire failures still throw.
+ * the same path as success. An HTTP failure without an envelope is synthesized
+ * into one (code `UPSTREAM_HTTP_<status>`) so rendering, JSON output, and exit
+ * codes stay on the normal path; non-HTTP failures still throw.
  */
 export async function apiCallToFintermWireResult<T>(
   apiCall: () => Promise<unknown>,
@@ -199,6 +201,15 @@ export async function apiCallToFintermWireResult<T>(
   } catch (error) {
     if (error instanceof APIRequestError && isFintermWireResult<T>(error.body)) {
       return error.body;
+    }
+    if (error instanceof APIRequestError) {
+      return {
+        finterm: fallbackFinterm(fallback),
+        error: {
+          code: `${UPSTREAM_HTTP_CODE_PREFIX}${error.status}`,
+          message: `The Finterm API returned HTTP ${error.status} without a structured error.`,
+        },
+      };
     }
     throw error;
   }

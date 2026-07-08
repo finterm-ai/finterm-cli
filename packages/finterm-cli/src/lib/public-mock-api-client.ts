@@ -149,7 +149,7 @@ class PublicMockAPIClient implements FintermAPIClient {
     this._token = null;
   }
 
-  async loginStart(_deviceName?: string): Promise<LoginStartResponse> {
+  async loginStart(_deviceName: string): Promise<LoginStartResponse> {
     if (isMockErrorMode()) {
       throw new Error('connect ECONNREFUSED 127.0.0.1:443');
     }

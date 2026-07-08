@@ -34,7 +34,8 @@ const DEFAULT_SESSION_EXPIRY_MS = 15 * 60 * 1000;
 /** Token plus its server-side identifier, returned once a login is authorized. */
 interface LoginTokenResult {
   token: string;
-  tokenId?: string;
+  /** Server-side token id; null when the server did not return one. */
+  tokenId: string | null;
   /** Plan summary from the authorized poll payload; null on older servers. */
   entitlement: LoginEntitlementSummary | null;
 }
@@ -237,7 +238,7 @@ class AuthLoginHandler extends BaseCommand {
     this.output.data(
       {
         authenticated: true,
-        tokenId: tokenResult.tokenId ?? null,
+        tokenId: tokenResult.tokenId,
         entitlement,
         message: 'Successfully logged in',
       },
@@ -300,7 +301,7 @@ class AuthLoginHandler extends BaseCommand {
                 spinner.stop();
                 return {
                   token: response.token,
-                  tokenId: response.tokenId,
+                  tokenId: response.tokenId ?? null,
                   entitlement: response.entitlement ?? null,
                 };
               }
