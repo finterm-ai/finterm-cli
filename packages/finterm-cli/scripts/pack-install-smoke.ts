@@ -158,6 +158,36 @@ function main(): void {
     run(fintermBin, ['tool', 'financial_statements', '--help'], { env: installedEnv });
     run(fintermBin, ['dataroom', 'info', '--help'], { env: installedEnv });
 
+    // Bundled-docs resolution from a NEUTRAL cwd (fin-pc0e): every doc command
+    // has an in-repo source fallback that masks broken installed resolution when
+    // run from the package root, and the placeholder fallbacks exit 0 — so these
+    // must assert real content, not just a clean exit, from outside the repo.
+    const neutralCwd = join(tempRoot, 'neutral-cwd');
+    mkdirSync(neutralCwd, { recursive: true });
+    const docContentChecks: readonly [string[], string][] = [
+      [['docs'], '# Finterm CLI Documentation'],
+      [['skill'], 'Account, Plan, and the Paywall'],
+      [['skill', '--brief'], 'The API surface is paid'],
+      [['prime'], 'Paid Model'],
+    ];
+    for (const [args, marker] of docContentChecks) {
+      const out = run(fintermBin, args, { env: installedEnv, cwd: neutralCwd }).stdout;
+      if (!out.includes(marker)) {
+        throw new Error(
+          `Expected 'finterm ${args.join(' ')}' from a neutral cwd to serve the bundled doc ` +
+            `(marker '${marker}'), got: ${out.slice(0, 200)}`
+        );
+      }
+    }
+
+    // `finterm setup` writes the skill into the project dir; it hard-fails if the
+    // bundled SKILL.md cannot be resolved.
+    run(fintermBin, ['setup'], { env: installedEnv, cwd: neutralCwd });
+    const installedSkill = join(neutralCwd, '.agents', 'skills', 'finterm', 'SKILL.md');
+    if (!existsSync(installedSkill)) {
+      throw new Error(`Expected 'finterm setup' to install ${installedSkill}`);
+    }
+
     // npx-style invocation: resolve the package by its installed location and run
     // its declared bin entry directly (what `npx @finterm-ai/cli` does), bypassing the
     // PATH bin shim. This catches breakage in the package's own bin resolution
