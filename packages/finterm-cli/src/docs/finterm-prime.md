@@ -7,13 +7,23 @@ reading for agents and terminal users.
 
 ```bash
 finterm --help            # Full command list
-finterm auth status       # Check token state
+finterm auth status       # Check account email and plan/trial state
 finterm auth login        # Authenticate when needed
 finterm setup --check     # Verify agent setup
 finterm setup             # Install supported agent setup
 finterm skill --brief     # Short workflow rules
 finterm docs              # Full CLI documentation
 ```
+
+## Paid Model
+
+Every authenticated API call requires Finterm Pro; activate at
+https://app.finterm.ai/pricing (pricing and trial terms are stated there).
+A non-Pro call fails with 402 `SUBSCRIPTION_REQUIRED` (machine-readable
+`error.upgrade_url` under `--json`): do not retry in a loop — relay the upgrade URL to
+your operator, then re-run after checkout (access activates automatically).
+A 401 on a previously working key means the key was rotated (one active key per
+account); re-run `finterm auth login`.
 
 ## Point Tools
 

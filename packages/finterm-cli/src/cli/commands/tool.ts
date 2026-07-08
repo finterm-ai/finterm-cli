@@ -16,9 +16,7 @@ import { BundleHandler, parseBundleParameters, TICKER_DATA_BUNDLE } from './bund
 import {
   apiCallToFintermWireResult,
   createApiOutputFormatOption,
-  getRequestedApiOutputFormat,
-  markFintermWireErrorExitCode,
-  renderFintermWireResult,
+  printFintermWireResult,
   type ApiOutputOptions,
   type FallbackResultMeta,
 } from '../lib/wire-result.js';
@@ -149,12 +147,9 @@ class ToolHandler extends BaseCommand {
       `Failed to execute tool: ${toolId}`
     );
 
-    this.output.data(wireResult, () => {
-      console.log(
-        renderFintermWireResult(wireResult, getRequestedApiOutputFormat(this.ctx, outputOptions))
-      );
-    });
-    markFintermWireErrorExitCode(wireResult);
+    // Success (and any machine format) prints the wire envelope on stdout;
+    // a wire error in default mode renders as the human block (C0/C1).
+    await printFintermWireResult(this.ctx, this.output, wireResult, outputOptions);
   }
 }
 

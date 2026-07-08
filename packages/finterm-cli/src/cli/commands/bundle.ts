@@ -33,7 +33,7 @@ import {
   getRequestedApiOutputFormat,
   hasRequestedApiOutputFormat,
   isFintermWireErrorResult,
-  markFintermWireErrorExitCode,
+  printFintermWireResult,
   renderFintermWireResult,
   type ApiOutputOptions,
   type FallbackResultMeta,
@@ -268,12 +268,9 @@ export class BundleHandler extends BaseCommand {
       `Failed to execute bundle command: ${actionName}`
     );
 
-    this.output.data(wireResult, () => {
-      console.log(
-        renderFintermWireResult(wireResult, getRequestedApiOutputFormat(this.ctx, outputOptions))
-      );
-    });
-    markFintermWireErrorExitCode(wireResult);
+    // Machine formats keep the wire envelope; a wire error in default mode
+    // renders as the human block (C0/C1).
+    await printFintermWireResult(this.ctx, this.output, wireResult, outputOptions);
   }
 
   /**
@@ -302,12 +299,7 @@ export class BundleHandler extends BaseCommand {
     );
 
     if (isFintermWireErrorResult(wireResult)) {
-      this.output.data(wireResult, () => {
-        console.log(
-          renderFintermWireResult(wireResult, getRequestedApiOutputFormat(this.ctx, outputOptions))
-        );
-      });
-      markFintermWireErrorExitCode(wireResult);
+      await printFintermWireResult(this.ctx, this.output, wireResult, outputOptions);
       return;
     }
 

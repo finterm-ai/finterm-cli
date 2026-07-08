@@ -27,6 +27,26 @@ terminal. If the browser cannot open from an agent shell, give the printed URL t
 human operator; use `--no-browser` only when suppressing the automatic browser open is
 intentional.
 
+## Account, Plan, and the Paywall
+
+Finterm is a paid product: every authenticated API call requires **Finterm Pro** (there
+is no free API tier). A new account activates Pro at https://app.finterm.ai/pricing —
+current pricing and trial terms are stated there.
+
+- `finterm auth login` needs the human once, in a browser. Headless runs can use a
+  dashboard-minted key via `FINTERM_API_KEY` instead.
+- `finterm auth status` reports the account email and plan/trial state — run it first
+  when access fails, so you can explain why.
+- A call from a non-Pro account fails with **HTTP 402, code `SUBSCRIPTION_REQUIRED`**;
+  with `--json`/`--format` the error carries a machine-readable `error.upgrade_url`.
+  Do not retry in a loop. **Relay the paywall to your operator**: the plan state and
+  the upgrade URL — activating a plan there unlocks access.
+- After the human completes checkout, simply re-run the command — access activates
+  server-side automatically; no re-login is needed.
+- A 401 on a previously working key usually means key rotation: Finterm keeps one
+  active key per account, so a login on another machine or a dashboard regenerate
+  revoked this copy. Re-run `finterm auth login`.
+
 Inspect the point-tool surface before running a lookup:
 
 ```bash
@@ -103,7 +123,7 @@ Room-mutating and authoring verbs are not part of the public `finterm dataroom` 
 ### Auth and Agent Setup
 
 - `finterm auth login` - Authenticate with Finterm
-- `finterm auth status` - Check the active token source
+- `finterm auth status` - Check the account email and plan/trial state
 - `finterm auth logout` - Clear the stored token
 - `finterm setup` - Install supported agent setup
 - `finterm setup --check` - Check agent setup state

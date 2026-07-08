@@ -8,6 +8,7 @@
 import { CLI_TOKEN_PREFIX, TOKEN_ID_PREFIX, isMockErrorMode } from '../cli-io/settings.js';
 import type { CacheLookupResult } from './api-cache.js';
 import type {
+  AccountWireResponse,
   APIResponse,
   BundleArtifactsData,
   BundleCatalogData,
@@ -170,6 +171,27 @@ class PublicMockAPIClient implements FintermAPIClient {
       status: 'authorized',
       token: `${CLI_TOKEN_PREFIX}mock_${Date.now().toString(16)}`,
       tokenId: `${TOKEN_ID_PREFIX}mock_${Date.now().toString(16)}`,
+      entitlement: {
+        plan: 'pro',
+        hasPro: true,
+        status: 'active',
+        trialEndsAt: null,
+      },
+    };
+  }
+
+  async account(): Promise<AccountWireResponse> {
+    return {
+      finterm: { schema: 'finterm.result:Account/v1', tool: 'account', args: {} },
+      data: {
+        email: 'mock@finterm.ai',
+        plan: 'pro',
+        has_pro: true,
+        subscription_status: 'active',
+        trial_ends_at: null,
+        current_period_end: null,
+        cancel_at_period_end: false,
+      },
     };
   }
 

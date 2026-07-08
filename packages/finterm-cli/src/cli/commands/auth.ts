@@ -11,9 +11,16 @@ import { Command } from 'commander';
 
 import { BaseCommand } from '../lib/base-command.js';
 import { CLIError } from '../lib/errors.js';
+import { KEY_ROTATION_LINE, UPGRADE_URL_FALLBACK } from '../lib/human-error.js';
 import { getFintermDir, ensureFintermDirs, getApiUrl } from '../../cli-io/settings.js';
 import { createTokenStorage, TOKEN_ENV_VAR } from '../../lib/token-storage.js';
-import { createAPIClient, type FintermAPIClient } from '../../lib/api-client.js';
+import {
+  APIRequestError,
+  createAPIClient,
+  type AccountData,
+  type FintermAPIClient,
+  type LoginEntitlementSummary,
+} from '../../lib/api-client.js';
 
 /** Delay between successive login-status polls. */
 const POLL_INTERVAL_MS = 2000;
@@ -28,6 +35,69 @@ const DEFAULT_SESSION_EXPIRY_MS = 15 * 60 * 1000;
 interface LoginTokenResult {
   token: string;
   tokenId?: string;
+  /** Plan summary from the authorized poll payload; null on older servers. */
+  entitlement: LoginEntitlementSummary | null;
+}
+
+/** Render an epoch-ms timestamp as a timezone-stable ISO date (YYYY-MM-DD). */
+function isoDate(epochMs: number): string {
+  return new Date(epochMs).toISOString().slice(0, 10);
+}
+
+/**
+ * Normalized plan state for rendering, converted from the wire shapes at the
+ * boundary: every field is required, and absent wire fields become explicit
+ * nulls so no caller can accidentally omit one.
+ */
+export interface PlanState {
+  hasPro: boolean;
+  status: string | null;
+  trialEndsAt: number | null;
+  /** Conversion pointer; null when entitled or when the server sent none. */
+  upgradeUrl: string | null;
+}
+
+/** Normalize the login-poll entitlement summary (camelCase wire) to PlanState. */
+function planStateFromEntitlement(summary: LoginEntitlementSummary): PlanState {
+  return {
+    hasPro: summary.hasPro,
+    status: summary.status,
+    trialEndsAt: summary.trialEndsAt,
+    upgradeUrl: summary.upgradeUrl ?? null,
+  };
+}
+
+/** Normalize the `/api/v1/account` payload (snake_case wire) to PlanState. */
+function planStateFromAccount(account: AccountData): PlanState {
+  return {
+    hasPro: account.has_pro,
+    status: account.subscription_status,
+    trialEndsAt: account.trial_ends_at,
+    upgradeUrl: account.upgrade_url ?? null,
+  };
+}
+
+/**
+ * The plan line for login/status output (funnel spec C2/C4): free accounts get
+ * the upgrade pointer; entitled accounts see their plan/trial state. Offer
+ * terms are never stated here — the pricing page owns them, so offer changes
+ * never require a CLI release. Exported for tests.
+ */
+export function planStateLines(plan: PlanState): string[] {
+  if (!plan.hasPro) {
+    const upgradeUrl = plan.upgradeUrl ?? UPGRADE_URL_FALLBACK;
+    if (plan.status === 'past_due' || plan.status === 'unpaid') {
+      return [
+        'Plan: payment failed — API access is paused.',
+        `Update your card to restore access: ${upgradeUrl}`,
+      ];
+    }
+    return ['Plan: free — API access requires Pro.', `Upgrade: ${upgradeUrl}`];
+  }
+  if (plan.status === 'trialing' && plan.trialEndsAt) {
+    return [`Plan: Pro (trial ends ${isoDate(plan.trialEndsAt)})`];
+  }
+  return ['Plan: Pro'];
 }
 
 /** Normalized login options after coercing raw Commander values to concrete types. */
@@ -163,10 +233,12 @@ class AuthLoginHandler extends BaseCommand {
 
     await tokenStorage.setToken(tokenResult.token, { tokenId: tokenResult.tokenId });
 
+    const entitlement = tokenResult.entitlement;
     this.output.data(
       {
         authenticated: true,
         tokenId: tokenResult.tokenId ?? null,
+        entitlement,
         message: 'Successfully logged in',
       },
       () => {
@@ -177,7 +249,20 @@ class AuthLoginHandler extends BaseCommand {
           console.log(`  Token ID: ${tokenResult.tokenId}`);
         }
         console.log('');
-        console.log('You can now use finterm commands that require authentication.');
+        // Plan-aware close (funnel spec C2): free logins get the upgrade
+        // pointer, entitled logins their plan/trial state; older servers
+        // without the poll entitlement fall back to the generic line.
+        const plan = entitlement ? planStateFromEntitlement(entitlement) : null;
+        if (plan && !plan.hasPro) {
+          console.log(`Not on Pro yet? Upgrade: ${plan.upgradeUrl ?? UPGRADE_URL_FALLBACK}`);
+        } else if (plan) {
+          for (const line of planStateLines(plan)) {
+            console.log(line);
+          }
+          console.log('You can now use finterm commands that require authentication.');
+        } else {
+          console.log('You can now use finterm commands that require authentication.');
+        }
       }
     );
   }
@@ -213,7 +298,11 @@ class AuthLoginHandler extends BaseCommand {
             case 'authorized':
               if (response.token) {
                 spinner.stop();
-                return { token: response.token, tokenId: response.tokenId };
+                return {
+                  token: response.token,
+                  tokenId: response.tokenId,
+                  entitlement: response.entitlement ?? null,
+                };
               }
               // Authorized but the token was already consumed by another retrieval;
               // the session is spent, so stop rather than poll forever.
@@ -270,44 +359,124 @@ class AuthLoginHandler extends BaseCommand {
   }
 }
 
-/** Reports whether a token is stored and where it came from, masking the token value. */
+/** Outcome of the server-side credential/entitlement check behind `auth status`. */
+type ServerCheck =
+  | { state: 'ok'; account: AccountData }
+  | { state: 'invalid_token'; code: string }
+  | { state: 'unavailable'; reason: string };
+
+/**
+ * Reports authentication state, masking the token value. With a stored
+ * credential it performs a server entitlement check (`GET /api/v1/account`,
+ * funnel spec C4) and reports the account email and plan/trial state \u2014 so a
+ * free-plan user learns WHY calls 402, and a rotated-away key is reported as
+ * invalid instead of a false "Authenticated". The local credential readout
+ * remains as the offline fallback.
+ */
 class AuthStatusHandler extends BaseCommand {
   async run(): Promise<void> {
     const fintermDir = getFintermDir();
     const tokenStorage = createTokenStorage(fintermDir);
     const tokenInfo = await tokenStorage.getTokenInfo();
 
-    if (tokenInfo.token) {
-      const maskedToken = maskToken(tokenInfo.token);
-
-      this.output.data(
-        {
-          authenticated: true,
-          token: maskedToken,
-          tokenId: tokenInfo.tokenId,
-          source: tokenInfo.source,
-        },
-        () => {
-          const colors = this.output.getColors();
-          console.log(`${colors.success('\u2713')} Authenticated`);
-          console.log(`  Token: ${maskedToken}`);
-          console.log(
-            `  Source: ${tokenInfo.source === 'env' ? 'FINTERM_API_KEY' : 'credentials file'}`
-          );
-          if (tokenInfo.tokenId) {
-            console.log(`  Token ID: ${tokenInfo.tokenId}`);
-          } else if (tokenInfo.source === 'env') {
-            console.log('  Token ID: unavailable for FINTERM_API_KEY');
-          }
-        }
-      );
-    } else {
+    if (!tokenInfo.token) {
       this.output.data({ authenticated: false }, () => {
         const colors = this.output.getColors();
         console.log(`${colors.warn('\u2717')} Not authenticated`);
         console.log('');
         console.log('Run `finterm auth login` to authenticate.');
       });
+      return;
+    }
+
+    const maskedToken = maskToken(tokenInfo.token);
+    const check = await this.checkServer(tokenInfo.token);
+
+    if (check.state === 'invalid_token') {
+      // The credential exists locally but the server rejects it \u2014 most often
+      // key rotation (funnel spec C3): one active key per account.
+      this.output.data(
+        {
+          authenticated: false,
+          token: maskedToken,
+          tokenId: tokenInfo.tokenId,
+          source: tokenInfo.source,
+          serverCheck: 'invalid_token',
+          code: check.code,
+        },
+        () => {
+          const colors = this.output.getColors();
+          console.log(`${colors.warn('\u2717')} Stored credential is no longer valid`);
+          console.log(`  Token: ${maskedToken}`);
+          console.log(`  ${KEY_ROTATION_LINE}`);
+          console.log('');
+          console.log('Run `finterm auth login` to re-authenticate.');
+        }
+      );
+      return;
+    }
+
+    const account = check.state === 'ok' ? check.account : null;
+    this.output.data(
+      {
+        authenticated: true,
+        token: maskedToken,
+        tokenId: tokenInfo.tokenId,
+        source: tokenInfo.source,
+        serverCheck: check.state === 'ok' ? 'ok' : 'unavailable',
+        account,
+      },
+      () => {
+        const colors = this.output.getColors();
+        console.log(`${colors.success('\u2713')} Authenticated`);
+        if (account?.email) {
+          console.log(`  Account: ${account.email}`);
+        }
+        console.log(`  Token: ${maskedToken}`);
+        console.log(
+          `  Source: ${tokenInfo.source === 'env' ? 'FINTERM_API_KEY' : 'credentials file'}`
+        );
+        if (tokenInfo.tokenId) {
+          console.log(`  Token ID: ${tokenInfo.tokenId}`);
+        } else if (tokenInfo.source === 'env') {
+          console.log('  Token ID: unavailable for FINTERM_API_KEY');
+        }
+        if (account) {
+          for (const line of planStateLines(planStateFromAccount(account))) {
+            console.log(`  ${line}`);
+          }
+        } else if (check.state === 'unavailable') {
+          console.log(
+            colors.dim(`  Plan: unknown \u2014 server check unavailable (${check.reason}).`)
+          );
+        }
+      }
+    );
+  }
+
+  /** Run the account read, classifying failures as invalid-token vs unreachable. */
+  private async checkServer(token: string): Promise<ServerCheck> {
+    try {
+      const client = createAPIClient(getApiUrl(), token, {
+        cacheEnabled: false,
+        onRequest: this.requestLogger(),
+      });
+      const response = await client.account();
+      if (response.data) {
+        return { state: 'ok', account: response.data };
+      }
+      return {
+        state: 'unavailable',
+        reason: response.error?.message ?? 'unexpected response shape',
+      };
+    } catch (error) {
+      if (error instanceof APIRequestError && error.status === 401) {
+        return { state: 'invalid_token', code: error.code ?? 'TOKEN_INVALID' };
+      }
+      return {
+        state: 'unavailable',
+        reason: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 }
