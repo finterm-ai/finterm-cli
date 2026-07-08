@@ -31,6 +31,44 @@ An agent prepares and verifies everything; two things are always the human maint
   tag — is a hard stop that the maintainer confirms and, for the bootstrap publish,
   runs.
 
+## When a release is required (triggers)
+
+The CLI embeds **copies of the server contract**: tool and bundle ids and example
+commands in the agent docs (`src/docs/finterm-docs.md`, `finterm-prime.md`, `SKILL.md`,
+`skill-brief.md`), command code (`src/cli/commands/*`), and the mock API client.
+The public API has **no alias or rename layer** (finterm Decision 16, greenfield): an id
+that changes server-side makes every embedded reference a 404. So a release is
+**required, coordinated with the server deploy**, when any of these land in
+finterm-main:
+
+1. **Tool or bundle id added, renamed, or removed** (commits marked `feat(api)!` are the
+   red flag — e.g. the `company_web_research` → `company_deep_research` rename).
+2. **Endpoint paths, the `{ finterm, data }` envelope, or error codes** change in a way
+   the CLI renders or documents.
+3. **Auth or login-flow changes** (device flow endpoints, token format, 402 payload).
+4. **Embedded docs drift** from the served catalog even without a code change.
+
+CLI-only fixes (output ergonomics, help text) batch on their own schedule and need no
+coordination.
+
+**Coordination order for breaking id changes:** the server change must NOT deploy to
+production before the matching CLI version is published (there is no alias to bridge the
+gap). Sequence: merge the server change → release the CLI carrying the new ids → deploy
+production → verify with the deployed-tier QA runbook
+(`devops/runbooks/finterm-cli-end-to-end-qa.runbook.md` in finterm-main).
+
+**The check (agent-runnable, read-only), run before any production API deploy:**
+
+```bash
+npm view @finterm-ai/cli version          # published…
+git -C <finterm-cli> log --oneline -1     # …vs repo HEAD (clean tree = nothing pending)
+# ids the CLI embeds vs the server catalog:
+grep -rho "company_[a-z_]*\|ticker_data" packages/finterm-cli/src | sort -u
+grep -n "name: '" <finterm-main>/finterm-web/convex/bundleCatalog.ts
+# breaking server changes since the last release:
+git -C <finterm-main> log --oneline --grep='feat(api)!' <last-release-date>..origin/main
+```
+
 ## One-time bootstrap
 
 ### Why a manual first publish is needed
