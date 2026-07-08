@@ -32,7 +32,7 @@ export interface TokenStorage {
   getTokenInfo(): Promise<TokenInfo>;
 
   /** Store a token */
-  setToken(token: string, metadata?: TokenMetadata): Promise<void>;
+  setToken(token: string, metadata: TokenMetadata): Promise<void>;
 
   /** Remove the stored token */
   clearToken(): Promise<void>;
@@ -45,7 +45,8 @@ export interface TokenStorage {
 export type TokenSource = 'env' | 'file';
 
 export interface TokenMetadata {
-  tokenId?: string;
+  /** Server-side token id; null when the server did not return one. */
+  tokenId: string | null;
 }
 
 /** Token plus provenance, surfaced by `finterm auth status`. */
@@ -129,10 +130,10 @@ export class FileTokenStorage implements TokenStorage {
     };
   }
 
-  async setToken(token: string, metadata: TokenMetadata = {}): Promise<void> {
+  async setToken(token: string, metadata: TokenMetadata): Promise<void> {
     const credentials = await this.readCredentials();
     credentials.token = token;
-    if (metadata.tokenId !== undefined) {
+    if (metadata.tokenId !== null) {
       credentials.tokenId = metadata.tokenId;
     } else {
       delete credentials.tokenId;
@@ -178,7 +179,7 @@ class EnvAwareTokenStorage implements TokenStorage {
     return this.fallback.getTokenInfo();
   }
 
-  async setToken(token: string, metadata: TokenMetadata = {}): Promise<void> {
+  async setToken(token: string, metadata: TokenMetadata): Promise<void> {
     // Always write to file storage (env var is read-only)
     return this.fallback.setToken(token, metadata);
   }

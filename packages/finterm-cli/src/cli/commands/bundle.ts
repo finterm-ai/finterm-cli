@@ -44,7 +44,6 @@ import { formatBytes, formatDuration } from '../lib/format.js';
 /** Options for `bundle run`, combining run parameters with the shared output-format flags. */
 interface BundleRunOptions extends ApiOutputOptions {
   companyName?: string;
-  asOfDate?: string;
   deliveryMode?: BundleDeliveryMode;
   param?: string[];
 }
@@ -155,7 +154,6 @@ function snakeBundleRunRequest(
     ticker: request.ticker,
     company_name: request.companyName,
     mode: request.mode,
-    as_of_date: request.asOfDate,
     delivery_mode: request.deliveryMode,
     parameters: request.parameters,
   };
@@ -476,7 +474,6 @@ const runCommand = new Command('run')
   .argument('<bundleName>', 'Bundle public name, e.g. company_web_research')
   .argument('<ticker>', 'Company ticker, e.g. AAPL')
   .option('--company-name <name>', 'Company name for display and normalization')
-  .option('--as-of-date <date>', 'Resource snapshot date (YYYY-MM-DD)')
   .addOption(
     new Option('--delivery-mode <mode>', 'Requested delivery mode').choices([
       'inline_result',
@@ -495,7 +492,6 @@ const runCommand = new Command('run')
         {
           ticker,
           companyName: options.companyName,
-          asOfDate: options.asOfDate,
           deliveryMode: options.deliveryMode,
           parameters: parseBundleParameters(options.param ?? null),
         },

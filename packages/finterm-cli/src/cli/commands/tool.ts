@@ -111,6 +111,31 @@ function parsePositiveInteger(value: string): number {
   return parsed;
 }
 
+/** Today's calendar date in UTC as YYYY-MM-DD — the server's day basis for as-of dates. */
+export function todayUtcIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Commander option parser for as-of dates: strict `YYYY-MM-DD` (a real calendar date),
+ * with the literal `today` resolved client-side to the current UTC date. Rejecting
+ * malformed dates here (exit 2) keeps user typos from surfacing as opaque upstream
+ * HTTP errors (fin-27bn).
+ */
+export function parseAsOfDate(value: string): string {
+  if (value === 'today') {
+    return todayUtcIsoDate();
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new InvalidArgumentError('must be YYYY-MM-DD (or "today")');
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new InvalidArgumentError(`"${value}" is not a real calendar date`);
+  }
+  return value;
+}
+
 /**
  * Commander option parser for a four-digit fiscal year, bounded to the range with usable
  * SEC EDGAR data ({@link MIN_FILING_YEAR}..{@link MAX_FILING_YEAR}).
@@ -156,11 +181,15 @@ class ToolHandler extends BaseCommand {
 const financialStatementsCommand = new Command('financial_statements')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
   .addOption(
-    new Option('--statement-type <type>', 'Statement type')
+    new Option('--statement-type <type>', 'Statement type (required)')
       .choices(['balance_sheet', 'income_statement', 'cash_flow'])
       .makeOptionMandatory()
   )
-  .requiredOption('--as-of-date <date>', 'Filing/resource as-of date (YYYY-MM-DD)')
+  .option(
+    '--as-of-date <date>',
+    'Filing/resource as-of date, YYYY-MM-DD (default: today)',
+    parseAsOfDate
+  )
   .addOption(
     new Option('--timeframe <timeframe>', 'Timeframe')
       .choices(['quarterly', 'annual', 'trailing_twelve_months'])
@@ -172,20 +201,21 @@ const financialStatementsCommand = new Command('financial_statements')
       ticker: string,
       options: {
         statementType: 'balance_sheet' | 'income_statement' | 'cash_flow';
-        asOfDate: string;
+        asOfDate?: string;
         timeframe?: 'quarterly' | 'annual' | 'trailing_twelve_months';
         limit?: number;
       } & ApiOutputOptions,
       command: Command
     ) => {
       const limit = options.limit;
+      const asOfDate = options.asOfDate ?? todayUtcIsoDate();
       const handler = new ToolHandler(command);
       await handler.run(
         'financial_statements',
         {
           ticker,
           statement_type: options.statementType,
-          as_of_date: options.asOfDate,
+          as_of_date: asOfDate,
           timeframe: options.timeframe,
           limit,
         },
@@ -193,7 +223,7 @@ const financialStatementsCommand = new Command('financial_statements')
           client.financialStatements({
             ticker,
             statementType: options.statementType,
-            asOfDate: options.asOfDate,
+            asOfDate,
             timeframe: options.timeframe!,
             limit,
           }),
@@ -204,7 +234,7 @@ const financialStatementsCommand = new Command('financial_statements')
 
 const optionsSentimentCommand = new Command('options_sentiment')
   .argument('<ticker>', 'Underlying stock ticker (e.g., AAPL)')
-  .requiredOption('--as-of-date <date>', 'Date for analysis (YYYY-MM-DD)')
+  .option('--as-of-date <date>', 'Date for analysis, YYYY-MM-DD (default: today)', parseAsOfDate)
   .option('--include-spread-analysis', 'Include spread analysis', false)
   .option('--expiration-filter <filter>', 'Filter by expiration window')
   .option('--max-contracts <number>', 'Maximum contracts to analyze', parsePositiveInteger, 50)
@@ -212,7 +242,7 @@ const optionsSentimentCommand = new Command('options_sentiment')
     async (
       ticker: string,
       options: {
-        asOfDate: string;
+        asOfDate?: string;
         includeSpreadAnalysis: boolean;
         expirationFilter?: string;
         maxContracts?: number;
@@ -220,12 +250,13 @@ const optionsSentimentCommand = new Command('options_sentiment')
       command: Command
     ) => {
       const maxContracts = options.maxContracts;
+      const asOfDate = options.asOfDate ?? todayUtcIsoDate();
       const handler = new ToolHandler(command);
       await handler.run(
         'options_sentiment',
         {
           underlying_ticker: ticker,
-          as_of_date: options.asOfDate,
+          as_of_date: asOfDate,
           include_spread_analysis: options.includeSpreadAnalysis,
           expiration_filter: options.expirationFilter,
           max_contracts: maxContracts,
@@ -233,7 +264,7 @@ const optionsSentimentCommand = new Command('options_sentiment')
         (client) =>
           client.optionsSentiment({
             underlyingTicker: ticker,
-            date: options.asOfDate,
+            date: asOfDate,
             includeSpreadAnalysis: options.includeSpreadAnalysis,
             expirationFilter: options.expirationFilter,
             maxContracts,
@@ -252,7 +283,7 @@ const filingsSearchCommand = new Command('sec_filings_search')
       .choices(['10-K', '10-Q', 'all'])
       .default('all')
   )
-  .option('--as-of-date <date>', 'Only filings after this date (YYYY-MM-DD)')
+  .option('--as-of-date <date>', 'Only filings after this date (YYYY-MM-DD)', parseAsOfDate)
   .option('--limit <number>', 'Maximum filings to return', parsePositiveInteger, 10)
   .action(
     async (
@@ -279,9 +310,9 @@ const filingsSearchCommand = new Command('sec_filings_search')
 
 const filingsFetchCommand = new Command('sec_filing_fetch')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
-  .requiredOption('--year <year>', 'Fiscal year (e.g., 2024)', parseYear)
+  .requiredOption('--year <year>', 'Fiscal year (e.g., 2024) (required)', parseYear)
   .addOption(
-    new Option('--period <period>', 'Fiscal period')
+    new Option('--period <period>', 'Fiscal period (required)')
       .choices(['FY', 'Q1', 'Q2', 'Q3', 'Q4'])
       .makeOptionMandatory()
   )
@@ -353,8 +384,14 @@ function parseFilingRef(value: string): { year: number; period: FilingPeriod } {
 
 const filingsDiffCommand = new Command('sec_filing_diff')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
-  .requiredOption('--base <year:period>', 'Earlier filing as YEAR:PERIOD (e.g., 2023:FY)')
-  .requiredOption('--compare <year:period>', 'Later filing as YEAR:PERIOD (e.g., 2024:FY)')
+  .requiredOption(
+    '--base <year:period>',
+    'Earlier filing as YEAR:PERIOD (e.g., 2023:FY) (required)'
+  )
+  .requiredOption(
+    '--compare <year:period>',
+    'Later filing as YEAR:PERIOD (e.g., 2024:FY) (required)'
+  )
   .option(
     '--sections <sections>',
     'Comma-separated section names (e.g., risk_factors,mda)',
@@ -407,7 +444,7 @@ const filingsDiffCommand = new Command('sec_filing_diff')
 
 const insiderTradesCommand = new Command('insider_trades')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
-  .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)')
+  .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)', parseAsOfDate)
   .option('--limit <number>', 'Maximum rows to return', parsePositiveInteger)
   .option('--transaction-codes <codes>', 'Comma-separated Form 4 codes (P,S,A,M,F,G,C,W)')
   .option('--include-derivatives', 'Include derivative-security rows', false)
@@ -459,7 +496,7 @@ const insiderTradesCommand = new Command('insider_trades')
 const institutionalHoldingsCommand = new Command('institutional_holdings')
   .argument('[ticker]', 'Stock ticker (e.g., AAPL); omit when using --investor-cik')
   .option('--investor-cik <cik>', 'Investor portfolio mode: SEC CIK')
-  .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)')
+  .option('--as-of-date <date>', 'As-of filing date (YYYY-MM-DD)', parseAsOfDate)
   .option('--limit <number>', 'Maximum rows to return', parsePositiveInteger)
   .action(
     async (
@@ -493,7 +530,11 @@ const institutionalHoldingsCommand = new Command('institutional_holdings')
 
 const optionsOverviewCommand = new Command('options_overview')
   .argument('<ticker>', 'Stock ticker (e.g., TSLA)')
-  .option('--as-of-date <date>', "As-of date: 'today' (default) or YYYY-MM-DD (live data only)")
+  .option(
+    '--as-of-date <date>',
+    "As-of date: 'today' (default) or YYYY-MM-DD (live data only)",
+    parseAsOfDate
+  )
   .action(
     async (ticker: string, options: { asOfDate?: string } & ApiOutputOptions, command: Command) => {
       const handler = new ToolHandler(command);
@@ -508,7 +549,11 @@ const optionsOverviewCommand = new Command('options_overview')
 
 const tickerSentimentCommand = new Command('ticker_sentiment')
   .argument('<ticker>', 'Stock ticker (e.g., AAPL)')
-  .option('--as-of-date <date>', "As-of date: 'today' (default) or YYYY-MM-DD (live data only)")
+  .option(
+    '--as-of-date <date>',
+    "As-of date: 'today' (default) or YYYY-MM-DD (live data only)",
+    parseAsOfDate
+  )
   .action(
     async (ticker: string, options: { asOfDate?: string } & ApiOutputOptions, command: Command) => {
       const handler = new ToolHandler(command);
@@ -537,18 +582,19 @@ const stockPricesCurrentCommand = new Command('stock_prices_current')
 
 const technicalIndicatorsCommand = new Command('technical_indicators')
   .argument('<symbols...>', 'Stock ticker symbols (e.g., NVDA AAPL)')
-  .requiredOption('--as-of-date <date>', 'As-of date (YYYY-MM-DD)')
+  .option('--as-of-date <date>', 'As-of date, YYYY-MM-DD (default: today)', parseAsOfDate)
   .action(
     async (
       symbols: string[],
-      options: { asOfDate: string } & ApiOutputOptions,
+      options: { asOfDate?: string } & ApiOutputOptions,
       command: Command
     ) => {
+      const asOfDate = options.asOfDate ?? todayUtcIsoDate();
       const handler = new ToolHandler(command);
       await handler.run(
         'technical_indicators',
-        { symbols, date: options.asOfDate },
-        (client) => client.technicalIndicators({ symbols, date: options.asOfDate }),
+        { symbols, date: asOfDate },
+        (client) => client.technicalIndicators({ symbols, date: asOfDate }),
         options
       );
     }
@@ -559,7 +605,6 @@ const technicalIndicatorsCommand = new Command('technical_indicators')
 const tickerDataCommand = new Command('ticker_data')
   .argument('<ticker>', 'Company ticker, e.g. AAPL')
   .option('--company-name <name>', 'Company name for display and normalization')
-  .option('--as-of-date <date>', 'Resource snapshot date (YYYY-MM-DD)')
   .addOption(
     new Option('--delivery-mode <mode>', 'Requested delivery mode').choices([
       'inline_result',
@@ -574,7 +619,6 @@ const tickerDataCommand = new Command('ticker_data')
       ticker: string,
       options: {
         companyName?: string;
-        asOfDate?: string;
         deliveryMode?: BundleDeliveryMode;
         param?: string[];
       } & ApiOutputOptions,
@@ -589,7 +633,6 @@ const tickerDataCommand = new Command('ticker_data')
         {
           ticker,
           companyName: options.companyName,
-          asOfDate: options.asOfDate,
           deliveryMode: options.deliveryMode,
           parameters: parseBundleParameters(options.param ?? null),
         },

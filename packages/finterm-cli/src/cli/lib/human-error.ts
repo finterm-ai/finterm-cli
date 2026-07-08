@@ -27,6 +27,13 @@ import { ICONS } from './output.js';
 /** Fallback when a 402 envelope predates the machine-readable field. */
 export const UPGRADE_URL_FALLBACK = 'https://app.finterm.ai/pricing';
 
+/**
+ * Prefix of the synthesized error code for an HTTP failure that carried no
+ * `{finterm,error}` envelope (a gateway 5xx, an HTML body); the renderer keys
+ * on it to distinguish a service fault from bad input (fin-27bn).
+ */
+export const UPSTREAM_HTTP_CODE_PREFIX = 'UPSTREAM_HTTP_';
+
 /** Post-checkout pointer: access resumes without any CLI-side re-auth. */
 export const RESUME_LINE = 'After checkout, re-run this command — access resumes automatically.';
 
@@ -53,6 +60,22 @@ interface HumanErrorShape {
 }
 
 function shapeFor(error: WireErrorLike): HumanErrorShape {
+  // A gateway 502 must stop reading like a problem with the user's input:
+  // say whether this looks like a service fault or a rejected request.
+  if (error.code.startsWith(UPSTREAM_HTTP_CODE_PREFIX)) {
+    const status = Number(error.code.slice(UPSTREAM_HTTP_CODE_PREFIX.length));
+    return {
+      title: `Finterm API request failed (HTTP ${status})`,
+      remedy:
+        status >= 500
+          ? [
+              'This looks like a service-side fault, not a problem with your input. Try again shortly; if it persists, contact contact@finterm.ai.',
+            ]
+          : [
+              'The request was rejected upstream without details. Double-check your inputs; if this persists, contact contact@finterm.ai.',
+            ],
+    };
+  }
   switch (error.code) {
     case 'SUBSCRIPTION_REQUIRED':
       return {

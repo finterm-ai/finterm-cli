@@ -27,7 +27,7 @@ describe('extractToolCommandSpecs', () => {
     const options = specFor('financial_statements').options;
     expect(options.find((option) => option.flags === '--statement-type <type>')).toEqual({
       flags: '--statement-type <type>',
-      description: 'Statement type',
+      description: 'Statement type (required)',
       required: true,
       takesValue: true,
       negate: false,

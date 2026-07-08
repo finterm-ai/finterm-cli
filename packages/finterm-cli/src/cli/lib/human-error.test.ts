@@ -24,6 +24,25 @@ describe('humanWireErrorLines', () => {
     expect(text).toContain(RESUME_LINE);
   });
 
+  it('renders a synthesized upstream 5xx as a service fault, not user error (fin-27bn)', () => {
+    const text = humanWireErrorLines({
+      code: 'UPSTREAM_HTTP_502',
+      message: 'The Finterm API returned HTTP 502 without a structured error.',
+    }).join('\n');
+    expect(text).toContain('Finterm API request failed (HTTP 502)');
+    expect(text).toContain('service-side fault, not a problem with your input');
+    expect(text).toContain('contact@finterm.ai');
+  });
+
+  it('renders a synthesized upstream 4xx as a rejected request', () => {
+    const text = humanWireErrorLines({
+      code: 'UPSTREAM_HTTP_404',
+      message: 'The Finterm API returned HTTP 404 without a structured error.',
+    }).join('\n');
+    expect(text).toContain('Finterm API request failed (HTTP 404)');
+    expect(text).toContain('Double-check your inputs');
+  });
+
   it('adds no offer terms of its own — price/trial wording is server-owned', () => {
     const text = humanWireErrorLines({
       code: 'SUBSCRIPTION_REQUIRED',

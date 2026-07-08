@@ -13,7 +13,7 @@
     "options": [
       {
         "flags": "--statement-type <type>",
-        "description": "Statement type",
+        "description": "Statement type (required)",
         "required": true,
         "takesValue": true,
         "negate": false,
@@ -21,8 +21,8 @@
       },
       {
         "flags": "--as-of-date <date>",
-        "description": "Filing/resource as-of date (YYYY-MM-DD)",
-        "required": true,
+        "description": "Filing/resource as-of date, YYYY-MM-DD (default: today)",
+        "required": false,
         "takesValue": true,
         "negate": false
       },
@@ -67,8 +67,8 @@
     "options": [
       {
         "flags": "--as-of-date <date>",
-        "description": "Date for analysis (YYYY-MM-DD)",
-        "required": true,
+        "description": "Date for analysis, YYYY-MM-DD (default: today)",
+        "required": false,
         "takesValue": true,
         "negate": false
       },
@@ -165,14 +165,14 @@
     "options": [
       {
         "flags": "--year <year>",
-        "description": "Fiscal year (e.g., 2024)",
+        "description": "Fiscal year (e.g., 2024) (required)",
         "required": true,
         "takesValue": true,
         "negate": false
       },
       {
         "flags": "--period <period>",
-        "description": "Fiscal period",
+        "description": "Fiscal period (required)",
         "required": true,
         "takesValue": true,
         "negate": false,
@@ -211,14 +211,14 @@
     "options": [
       {
         "flags": "--base <year:period>",
-        "description": "Earlier filing as YEAR:PERIOD (e.g., 2023:FY)",
+        "description": "Earlier filing as YEAR:PERIOD (e.g., 2023:FY) (required)",
         "required": true,
         "takesValue": true,
         "negate": false
       },
       {
         "flags": "--compare <year:period>",
-        "description": "Later filing as YEAR:PERIOD (e.g., 2024:FY)",
+        "description": "Later filing as YEAR:PERIOD (e.g., 2024:FY) (required)",
         "required": true,
         "takesValue": true,
         "negate": false
@@ -453,8 +453,8 @@
     "options": [
       {
         "flags": "--as-of-date <date>",
-        "description": "As-of date (YYYY-MM-DD)",
-        "required": true,
+        "description": "As-of date, YYYY-MM-DD (default: today)",
+        "required": false,
         "takesValue": true,
         "negate": false
       },
@@ -483,13 +483,6 @@
       {
         "flags": "--company-name <name>",
         "description": "Company name for display and normalization",
-        "required": false,
-        "takesValue": true,
-        "negate": false
-      },
-      {
-        "flags": "--as-of-date <date>",
-        "description": "Resource snapshot date (YYYY-MM-DD)",
         "required": false,
         "takesValue": true,
         "negate": false

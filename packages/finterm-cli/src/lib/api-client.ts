@@ -276,7 +276,6 @@ export interface BundleRunRequest {
   ticker?: string;
   companyName?: string;
   mode?: 'placeholder' | 'live';
-  asOfDate?: string;
   deliveryMode?: BundleDeliveryMode;
   parameters?: Record<string, unknown>;
 }
@@ -604,7 +603,7 @@ export interface FintermAPIClient {
   clearToken(): void;
 
   // Auth endpoints (no token required)
-  loginStart(deviceName?: string): Promise<LoginStartResponse>;
+  loginStart(deviceName: string): Promise<LoginStartResponse>;
   loginPoll(sessionId: string, pollSecret: string): Promise<LoginPollResponse>;
 
   /**
@@ -940,7 +939,7 @@ class LiveFintermAPIClient implements FintermAPIClient {
   }
 
   // Auth endpoints
-  async loginStart(deviceName?: string): Promise<LoginStartResponse> {
+  async loginStart(deviceName: string): Promise<LoginStartResponse> {
     return this.request('POST', '/cli/login/start', { deviceName });
   }
 
@@ -1153,11 +1152,12 @@ class LiveFintermAPIClient implements FintermAPIClient {
     bundleName: string,
     params: BundleRunRequest
   ): Promise<APIResponse<BundleRunData>> {
+    // Exactly the public bundle-run contract keys (bundleRunRequestSchema is
+    // strict server-side): a key the contract lacks is a 400, not a no-op.
     const body = {
       ticker: params.ticker,
       company_name: params.companyName,
       mode: params.mode,
-      as_of_date: params.asOfDate,
       delivery_mode: params.deliveryMode,
       parameters: params.parameters,
     };

@@ -46,7 +46,7 @@ describe('token storage', () => {
   it('creates the credentials file with mode 0600 and its parent dir with mode 0700', async () => {
     const storage = createTokenStorage(baseDir);
 
-    await storage.setToken('secret-token');
+    await storage.setToken('secret-token', { tokenId: null });
 
     if (isWindows) {
       // POSIX permission bits are not meaningful on win32.
@@ -79,7 +79,7 @@ describe('token storage', () => {
     process.env[TOKEN_ENV_VAR] = 'env-token';
     const storage = createTokenStorage(baseDir);
 
-    await storage.setToken('file-token');
+    await storage.setToken('file-token', { tokenId: null });
 
     // The file on disk holds only the explicitly written token, not the env value.
     const contents = await readFile(credentialsPath, 'utf-8');

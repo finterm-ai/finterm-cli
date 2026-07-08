@@ -80,7 +80,6 @@ function normalizeMockBundleRequest(
     ticker: params.ticker ? params.ticker.toUpperCase() : null,
     companyName: params.companyName ?? null,
     mode: params.mode ?? 'placeholder',
-    asOfDate: params.asOfDate ?? null,
     deliveryMode: params.deliveryMode ?? entry.deliveryModes[0],
     parameters: params.parameters ?? {},
   };
@@ -149,7 +148,7 @@ class PublicMockAPIClient implements FintermAPIClient {
     this._token = null;
   }
 
-  async loginStart(_deviceName?: string): Promise<LoginStartResponse> {
+  async loginStart(_deviceName: string): Promise<LoginStartResponse> {
     if (isMockErrorMode()) {
       throw new Error('connect ECONNREFUSED 127.0.0.1:443');
     }
