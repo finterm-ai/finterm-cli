@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.2
+
+### Fixes
+
+- Bundled agent docs now resolve in global installs: `finterm skill`, `docs`, and
+  `prime` serve the real content and `finterm setup` works from any directory.
+  Previously the bin symlink defeated resolution, so published installs printed
+  placeholders and `setup` failed with "SKILL.md not found".
+- Removed `--as-of-date` from `finterm tool ticker_data` and `finterm bundle run`:
+  the public bundle-run contract never had the field, so passing it always failed
+  with a validation error.
+
+### Improvements
+
+- Required options are marked `(required)` in `--help`, and `--as-of-date` on
+  `financial_statements`, `options_sentiment`, and `technical_indicators` is now
+  optional, defaulting to today (UTC) — so "latest" queries work without flags.
+- As-of dates are validated as real `YYYY-MM-DD` calendar dates before any network
+  call (the literal `today` is also accepted), failing fast as a usage error
+  instead of surfacing an upstream HTTP error.
+- An API failure without a structured error envelope (e.g. a gateway 502) now
+  renders as an explicit service-fault or rejected-request block with the HTTP
+  status, instead of a bare `HTTP <status>` message that read like bad input.
+
 ## 0.2.1
 
 ### Improvements
