@@ -48,7 +48,7 @@ export const FINTERM_TOOL_DEFINITIONS: Record<string, FintermToolDefinition> = {
   },
   stock_prices_current: {
     title: 'Current Stock Prices',
-    summary: 'Latest trade price for one or more stock symbols.',
+    summary: 'Latest available price for one or more stock symbols, delayed by up to 15 minutes.',
   },
   technical_indicators: {
     title: 'Technical Indicators',
