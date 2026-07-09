@@ -419,7 +419,7 @@
   },
   {
     "id": "stock_prices_current",
-    "summary": "Latest trade price for one or more stock symbols.",
+    "summary": "Latest available price for one or more stock symbols, delayed by up to 15 minutes.",
     "args": [
       {
         "name": "symbols",

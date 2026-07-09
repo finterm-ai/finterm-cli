@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+### Fixes
+
+- Clarify that `stock_prices_current` returns the latest available stock prices and
+  that values are delayed by up to 15 minutes depending on provider plan and exchange
+  entitlements.
+
 ## 0.3.0
 
 ### Breaking
