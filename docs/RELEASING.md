@@ -38,8 +38,7 @@ commands in the agent docs (`src/docs/finterm-docs.md`, `finterm-prime.md`, `SKI
 `skill-brief.md`), command code (`src/cli/commands/*`), and the mock API client.
 The public API has **no alias or rename layer** (finterm Decision 16, greenfield): an id
 that changes server-side makes every embedded reference a 404. So a release is
-**required, coordinated with the server deploy**, when any of these land in
-finterm-main:
+**required, coordinated with the server deploy**, when any of these land server-side:
 
 1. **Tool or bundle id added, renamed, or removed** (commits marked `feat(api)!` are the
    red flag — e.g. the `company_web_research` → `company_deep_research` rename).
@@ -54,19 +53,19 @@ coordination.
 **Coordination order for breaking id changes:** the server change must NOT deploy to
 production before the matching CLI version is published (there is no alias to bridge the
 gap). Sequence: merge the server change → release the CLI carrying the new ids → deploy
-production → verify with the deployed-tier QA runbook
-(`devops/runbooks/finterm-cli-end-to-end-qa.runbook.md` in finterm-main).
+production → verify with the deployed-tier end-to-end QA runbook (maintained alongside
+the server).
 
 **The check (agent-runnable, read-only), run before any production API deploy:**
 
 ```bash
 npm view @finterm-ai/cli version          # published…
 git -C <finterm-cli> log --oneline -1     # …vs repo HEAD (clean tree = nothing pending)
-# ids the CLI embeds vs the server catalog:
+# ids the CLI embeds vs the served catalog:
 grep -rho "company_[a-z_]*\|ticker_data" packages/finterm-cli/src | sort -u
-grep -n "name: '" <finterm-main>/finterm-web/convex/bundleCatalog.ts
-# breaking server changes since the last release:
-git -C <finterm-main> log --oneline --grep='feat(api)!' <last-release-date>..origin/main
+finterm tool --help                        # served tool/bundle ids
+# breaking server changes since the last release: check the server repo's
+# release notes / feat(api)! commits (server maintainers own that check).
 ```
 
 ## One-time bootstrap

@@ -6,11 +6,11 @@ import { createAPIClient, type BundleRunRequest } from './api-client.js';
  * The public bundle-run request contract. The server's bundleRunRequestSchema is
  * strict, so a key outside this list is a 400 VALIDATION_ERROR, not a no-op —
  * this pin exists because the CLI once sent an `as_of_date` the contract never
- * had (fin-dasv). Update it only together with the server schema and OpenAPI.
+ * had. Update it only together with the server schema and OpenAPI.
  */
 const BUNDLE_RUN_CONTRACT_KEYS = ['ticker', 'company_name', 'mode', 'delivery_mode', 'parameters'];
 
-describe('bundleRun request body (fin-dasv contract guard)', () => {
+describe('bundleRun request body (contract guard)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

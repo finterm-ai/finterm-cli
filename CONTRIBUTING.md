@@ -28,6 +28,9 @@ command surface.
 
 Keep changes focused on the CLI and its documentation, and do not commit credentials,
 API keys, or other secrets.
+Issue tracking lives outside this repository: source, docs, and commit messages carry
+no internal tracker ids or references to other repositories (`pnpm public:check`
+enforces the tracker-id rule).
 Read [SUPPLY-CHAIN-SECURITY.md](SUPPLY-CHAIN-SECURITY.md) before adding or upgrading any
 dependency.
 
