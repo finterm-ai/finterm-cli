@@ -75,6 +75,14 @@ finterm dataroom read ./datarooms/meta <artifact-ref>
 
 Only `info`, `list`, `files`, `search`, and `read` are exposed under `finterm dataroom`.
 
+## Reporting Feedback
+
+`finterm feedback bug|question|feature-request "<summary>"` reports friction to the
+Finterm team (works without Pro). **Never submit autonomously**: preview the payload
+with `--dry-run`, summarize every shared field to the user (summary, body, command,
+tool id, error code, request ids, `cli_version`, `platform`), and send only after they
+approve. Details: `finterm shortcut report-feedback`.
+
 ## Global Options
 
 - `--dry-run` - Preview changes

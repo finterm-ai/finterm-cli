@@ -118,6 +118,32 @@ finterm dataroom read ./datarooms/meta <artifact-ref>
 The mounted Dataroom verbs are `info`, `list`, `files`, `search`, and `read`.
 Room-mutating and authoring verbs are not part of the public `finterm dataroom` surface.
 
+## Reporting Feedback (Bugs, Questions, Feature Requests)
+
+Finterm has an in-product feedback channel: `finterm feedback bug|question|feature-request
+"<summary>"` posts to the authenticated feedback endpoint (works without Pro). Report
+friction you hit — an unexpected error, wrong-looking data, misleading help or docs, a
+missing capability — after finishing (or being blocked on) the user's actual task,
+never from inside a retry loop.
+
+**Consent is mandatory: never submit feedback autonomously.** Before sending, confirm
+with the user and summarize exactly what will be shared, field by field — the summary,
+the body, and each context field (the command line, the tool id, the error code, the
+request ids, plus the auto-filled `cli_version` and `platform`). Use the global
+`--dry-run` to preview the exact payload for that confirmation, then re-run without it
+once the user approves:
+
+```bash
+finterm --dry-run feedback bug "sec_filing_fetch 500s for BRK.B FY2024" \
+  --command "finterm tool sec_filing_fetch BRK.B --year 2024 --period FY" \
+  --tool sec_filing_fetch --error-code UPSTREAM_HTTP_502 --request-id req_abc123 \
+  --body "Expected filing sections; got HTTP 502 twice."
+```
+
+Quality: include the failing command and the `request_id` from the error envelope
+(both are in your transcript), state expected vs. actual in `--body`, and keep one
+report per distinct issue. Full flow: `finterm shortcut report-feedback`.
+
 ## Command Map
 
 ### Auth and Agent Setup
@@ -175,6 +201,14 @@ Run `finterm tool <id> --help` before adding flags.
 - `finterm dataroom files <room>` - List file artifacts
 - `finterm dataroom search <room> <query>` - Search file contents
 - `finterm dataroom read <room> <artifact-ref>` - Read one artifact
+
+### Feedback & Support
+
+- `finterm feedback bug "<summary>"` - Report a bug (confirm with the user first)
+- `finterm feedback question "<summary>"` - Ask the Finterm team a question
+- `finterm feedback feature-request "<summary>"` - Request a missing capability
+- Context flags: `--command`, `--tool`, `--error-code`, `--request-id` (repeatable),
+  `--body` / `--body-file`; preview with the global `--dry-run`
 
 ## Global Options
 
