@@ -1,6 +1,5 @@
 /**
- * Humanized default-mode rendering for API wire errors (funnel spec C0/C1,
- * fin-qzmc / fin-1suq).
+ * Humanized default-mode rendering for API wire errors.
  *
  * When no machine-readable format was requested, an API error prints as a
  * concise human block on stderr — title, message, error code, and the remedy —
@@ -30,7 +29,7 @@ export const UPGRADE_URL_FALLBACK = 'https://app.finterm.ai/pricing';
 /**
  * Prefix of the synthesized error code for an HTTP failure that carried no
  * `{finterm,error}` envelope (a gateway 5xx, an HTML body); the renderer keys
- * on it to distinguish a service fault from bad input (fin-27bn).
+ * on it to distinguish a service fault from bad input.
  */
 export const UPSTREAM_HTTP_CODE_PREFIX = 'UPSTREAM_HTTP_';
 

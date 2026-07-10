@@ -158,7 +158,7 @@ function main(): void {
     run(fintermBin, ['tool', 'financial_statements', '--help'], { env: installedEnv });
     run(fintermBin, ['dataroom', 'info', '--help'], { env: installedEnv });
 
-    // Bundled-docs resolution from a NEUTRAL cwd (fin-pc0e): every doc command
+    // Bundled-docs resolution from a NEUTRAL cwd: every doc command
     // has an in-repo source fallback that masks broken installed resolution when
     // run from the package root, and the placeholder fallbacks exit 0 — so these
     // must assert real content, not just a clean exit, from outside the repo.

@@ -2,8 +2,8 @@
 
 /**
  * Generate the CLI's tool-definition module from the package's committed `.api.md`
- * files. The public CLI repo is self-contained: this script never reads fintool or
- * any private repository checkout.
+ * files. The public CLI repo is self-contained: this script never reads any other
+ * repository checkout.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';

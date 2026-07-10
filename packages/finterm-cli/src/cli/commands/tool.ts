@@ -120,7 +120,7 @@ export function todayUtcIsoDate(): string {
  * Commander option parser for as-of dates: strict `YYYY-MM-DD` (a real calendar date),
  * with the literal `today` resolved client-side to the current UTC date. Rejecting
  * malformed dates here (exit 2) keeps user typos from surfacing as opaque upstream
- * HTTP errors (fin-27bn).
+ * HTTP errors.
  */
 export function parseAsOfDate(value: string): string {
   if (value === 'today') {

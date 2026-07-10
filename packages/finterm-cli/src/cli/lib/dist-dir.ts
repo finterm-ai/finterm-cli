@@ -2,7 +2,7 @@
  * Resolve the bundled `dist/` directory (where `docs/` ships) for every
  * doc-serving command (`skill`, `docs`, `prime`, `resources`, `setup`).
  *
- * Resolution order matters for installed correctness (fin-pc0e):
+ * Resolution order matters for installed correctness:
  *
  * 1. This module's own location — in the built package this code lives in a
  *    chunk at `dist/`, so `import.meta.url` is authoritative regardless of how

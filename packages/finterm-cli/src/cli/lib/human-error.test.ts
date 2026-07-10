@@ -25,7 +25,7 @@ describe('humanWireErrorLines', () => {
     expect(text).toContain(RESUME_LINE);
   });
 
-  it('renders a synthesized upstream 5xx as a service fault, not user error (fin-27bn)', () => {
+  it('renders a synthesized upstream 5xx as a service fault, not user error', () => {
     const text = humanWireErrorLines({
       code: 'UPSTREAM_HTTP_502',
       message: 'The Finterm API returned HTTP 502 without a structured error.',

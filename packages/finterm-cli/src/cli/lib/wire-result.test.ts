@@ -99,7 +99,7 @@ describe('printFintermWireResult (C0 routing)', () => {
   });
 });
 
-describe('apiCallToFintermWireResult (fin-27bn upstream synthesis)', () => {
+describe('apiCallToFintermWireResult (upstream synthesis)', () => {
   const FALLBACK = { schema: 'finterm.result:Test/v1', tool: 'test_tool', args: {} };
 
   it('synthesizes an UPSTREAM_HTTP_<status> error for an envelope-less HTTP failure', async () => {
