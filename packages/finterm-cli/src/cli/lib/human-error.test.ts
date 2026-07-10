@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   humanWireErrorLines,
   KEY_ROTATION_LINE,
+  REPORT_FEEDBACK_LINE,
   RESUME_LINE,
   UPGRADE_URL_FALLBACK,
 } from './human-error.js';
@@ -94,5 +95,27 @@ describe('humanWireErrorLines', () => {
     expect(lines[1]).toContain('It broke.');
     expect(lines[2]).toContain('(code: SOMETHING_NEW)');
     expect(lines).toHaveLength(3);
+  });
+
+  it('offers the in-product report on service faults (user feedback loop)', () => {
+    // Synthesized upstream 5xx and every RUNTIME_*/tool-fault class carry the
+    // `finterm feedback bug` affordance; caller-input errors do not.
+    const faultCodes = [
+      'UPSTREAM_HTTP_502',
+      'RUNTIME_UNAVAILABLE',
+      'RUNTIME_QUEUE_FULL',
+      'RUNTIME_RUN_FAILED',
+      'RUNTIME_CONTRACT_MISMATCH',
+      'TOOL_EXECUTION_FAILED',
+    ];
+    for (const code of faultCodes) {
+      const text = humanWireErrorLines({ code, message: 'It broke.' }).join('\n');
+      expect(text, code).toContain(REPORT_FEEDBACK_LINE);
+      expect(text, code).toContain('finterm feedback bug');
+    }
+    for (const code of ['UPSTREAM_HTTP_404', 'VALIDATION_ERROR', 'TOKEN_MISSING']) {
+      const text = humanWireErrorLines({ code, message: 'Bad input.' }).join('\n');
+      expect(text, code).not.toContain('finterm feedback');
+    }
   });
 });

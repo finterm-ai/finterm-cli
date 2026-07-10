@@ -26,6 +26,7 @@ import { setupCommand } from './commands/setup.js';
 import { authCommand } from './commands/auth.js';
 import { createToolCommand } from './commands/tool.js';
 import { bundleCommand } from './commands/bundle.js';
+import { feedbackCommand } from './commands/feedback.js';
 import { runsCommand } from './commands/runs.js';
 import { dataroomCommand } from './commands/dataroom.js';
 import { getCommandContext } from './lib/context.js';
@@ -179,6 +180,9 @@ export function createProgram(): Command {
 
   program.commandsGroup('Point Data Tools:');
   program.addCommand(createToolCommand({ experimental: isExperimentalMode() }));
+
+  program.commandsGroup('Feedback & Support:');
+  program.addCommand(feedbackCommand);
 
   applyColoredHelpToAllCommands(program);
 

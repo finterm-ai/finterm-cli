@@ -16,6 +16,8 @@ import type {
   BundleRunData,
   BundleRunRequest,
   BundleRunResultData,
+  FeedbackAckWireResponse,
+  FeedbackSubmission,
   FintermAPIClient,
   LoginPollResponse,
   LoginStartResponse,
@@ -190,6 +192,21 @@ class PublicMockAPIClient implements FintermAPIClient {
         trial_ends_at: null,
         current_period_end: null,
         cancel_at_period_end: false,
+      },
+    };
+  }
+
+  async submitFeedback(submission: FeedbackSubmission): Promise<FeedbackAckWireResponse> {
+    // Deterministic id (keyed by kind, no clock) so test output is stable.
+    return {
+      finterm: {
+        schema: 'finterm.result:FeedbackAck/v1',
+        tool: 'feedback',
+        args: { kind: submission.kind },
+      },
+      data: {
+        feedback_id: `fb_mock_${submission.kind}`,
+        status: 'received',
       },
     };
   }

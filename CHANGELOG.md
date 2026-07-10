@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- New `finterm feedback` command family (`bug`, `question`, `feature-request` with
+  alias `feature`): report a bug, ask a question, or request a feature straight from
+  the CLI, posting to the authenticated `POST /api/v1/feedback` endpoint (works
+  without a Pro subscription). The full payload is always previewed before sending,
+  the global `--dry-run` previews without sending, and a client-side scrub rejects
+  obvious secrets before submission. Context flags: `--command`, `--tool`,
+  `--error-code`, repeatable `--request-id`; long text via `--body`,
+  `--body-file <path>`, or `--body-file -` (stdin).
+- Root `--help` now points at the feedback channel, and service-fault errors
+  (upstream 5xx, `RUNTIME_*`, tool failures) suggest `finterm feedback bug` with the
+  failing `request_id`.
+
 ## 0.3.1
 
 ### Fixes

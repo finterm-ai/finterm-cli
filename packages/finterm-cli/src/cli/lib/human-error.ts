@@ -46,6 +46,15 @@ export const KEY_ROTATION_LINE =
   'Finterm keeps one active API key per account: logging in on another machine or ' +
   'regenerating the key in the dashboard revokes this one.';
 
+/**
+ * In-product report affordance on service-fault errors (the user feedback
+ * loop): the moment something looks broken is exactly when a report is
+ * cheapest to file and most useful to receive.
+ */
+export const REPORT_FEEDBACK_LINE =
+  'If this looks wrong, report it: `finterm feedback bug "<summary>" --request-id <id>` ' +
+  '(the request id is in the error envelope).';
+
 /** The wire error fields the human renderer consumes. */
 export interface WireErrorLike {
   code: string;
@@ -70,6 +79,7 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
         status >= 500
           ? [
               'This looks like a service-side fault, not a problem with your input. Try again shortly; if it persists, contact contact@finterm.ai.',
+              REPORT_FEEDBACK_LINE,
             ]
           : [
               'The request was rejected upstream without details. Double-check your inputs; if this persists, contact contact@finterm.ai.',
@@ -108,12 +118,18 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
         title: 'Data runtime unavailable',
         remedy: [
           'The Finterm data runtime could not serve this request. Try again shortly; if it persists, contact contact@finterm.ai.',
+          REPORT_FEEDBACK_LINE,
         ],
       };
     case 'VALIDATION_ERROR':
     case 'INVALID_JSON':
       return { title: 'Invalid request', remedy: [] };
     default:
+      // Every service-fault class (any other RUNTIME_* code, upstream tool
+      // failures) carries the report affordance: not the caller's fault.
+      if (error.code.startsWith('RUNTIME_') || error.code === 'TOOL_EXECUTION_FAILED') {
+        return { title: 'Request failed', remedy: [REPORT_FEEDBACK_LINE] };
+      }
       return { title: 'Request failed', remedy: [] };
   }
 }
