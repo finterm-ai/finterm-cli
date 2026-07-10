@@ -14,6 +14,7 @@ import type { CommandContext } from './context.js';
 import { CLIError } from './errors.js';
 import { printHumanWireError, UPSTREAM_HTTP_CODE_PREFIX } from './human-error.js';
 import type { OutputManager } from './output.js';
+import { buildRecentRequestEntry, recordRecentRequest } from './recent-requests.js';
 
 /** Serialization format for a wire result printed to stdout. */
 export type ApiOutputFormat = 'json' | 'yaml';
@@ -193,6 +194,20 @@ export function toFintermWireResult<T>(
  * codes stay on the normal path; non-HTTP failures still throw.
  */
 export async function apiCallToFintermWireResult<T>(
+  apiCall: () => Promise<unknown>,
+  fallback: FallbackResultMeta
+): Promise<FintermWireResult<T>> {
+  const result = await apiCallOutcome<T>(apiCall, fallback);
+  // Feed the recent-requests ledger (the `finterm feedback --last` context
+  // source) with every API outcome except feedback submissions themselves —
+  // a report should attach the failing data call, not the previous report.
+  if (result.finterm.tool !== 'feedback') {
+    await recordRecentRequest(buildRecentRequestEntry(result));
+  }
+  return result;
+}
+
+async function apiCallOutcome<T>(
   apiCall: () => Promise<unknown>,
   fallback: FallbackResultMeta
 ): Promise<FintermWireResult<T>> {

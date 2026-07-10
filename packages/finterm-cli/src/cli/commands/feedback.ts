@@ -19,6 +19,7 @@ import type {
 import { getAuthenticatedClient } from '../lib/authenticated-client.js';
 import { BaseCommand } from '../lib/base-command.js';
 import { CLIError, ValidationError } from '../lib/errors.js';
+import { pickLastRequestForFeedback, type RecentRequestEntry } from '../lib/recent-requests.js';
 import { VERSION } from '../lib/version.js';
 import {
   apiCallToFintermWireResult,
@@ -74,6 +75,32 @@ export interface FeedbackCommandOptions extends ApiOutputOptions {
   tool?: string;
   errorCode?: string;
   requestId?: string[];
+  /** Presence flag: Commander sets `true` when `--last` was passed, else omits the key. */
+  last?: true;
+}
+
+/**
+ * Merge `--last` context (the most recent failed API call from the local
+ * recent-requests ledger, else the most recent call) under the caller's
+ * explicit flags — anything typed out always wins. The merged result still
+ * flows through the payload preview and consent flow before sending.
+ */
+export function mergeLastRequestContext(
+  options: FeedbackCommandOptions,
+  last: RecentRequestEntry
+): FeedbackCommandOptions {
+  const requestIds = options.requestId ?? [];
+  return {
+    ...options,
+    command: options.command ?? last.command,
+    tool: options.tool ?? last.tool,
+    ...(options.errorCode === undefined && last.errorCode !== undefined
+      ? { errorCode: last.errorCode }
+      : {}),
+    ...(last.requestId !== undefined && !requestIds.includes(last.requestId)
+      ? { requestId: [...requestIds, last.requestId] }
+      : {}),
+  };
 }
 
 /** Commander argument parser: enforce the summary cap before any network call. */
@@ -205,8 +232,18 @@ export function assertNoSecretLikeContent(submission: FeedbackSubmission): void 
 /** Executes a feedback submission: preview, optional dry-run stop, send, render. */
 class FeedbackHandler extends BaseCommand {
   async run(kind: FeedbackKind, summary: string, options: FeedbackCommandOptions): Promise<void> {
-    const body = await resolveFeedbackBody(options);
-    const submission = buildFeedbackSubmission({ kind, summary, body, options });
+    let effectiveOptions = options;
+    if (options.last) {
+      const last = await pickLastRequestForFeedback();
+      if (!last) {
+        throw new CLIError(
+          'No recent API calls are recorded locally, so --last has nothing to attach. Pass --command/--request-id explicitly instead.'
+        );
+      }
+      effectiveOptions = mergeLastRequestContext(options, last);
+    }
+    const body = await resolveFeedbackBody(effectiveOptions);
+    const submission = buildFeedbackSubmission({ kind, summary, body, options: effectiveOptions });
     assertNoSecretLikeContent(submission);
 
     // The payload preview is the transparency half of the consent flow: what
@@ -291,6 +328,10 @@ function feedbackSubcommand(name: string, description: string, kind: FeedbackKin
       `A request_id from an affected response (repeatable, up to ${MAX_FEEDBACK_REQUEST_IDS})`,
       collectRequestId,
       []
+    )
+    .option(
+      '--last',
+      'Attach context from the most recent recorded API call (prefers the last failed one); explicit flags win'
     )
     .addOption(createApiOutputFormatOption())
     .action(async (summary: string, options: FeedbackCommandOptions, command: Command) => {

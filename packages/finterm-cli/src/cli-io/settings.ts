@@ -27,6 +27,9 @@ export const CONFIG_FILENAME = 'config.yaml';
 /** Local bundle run ledger filename */
 export const RUN_LEDGER_FILENAME = 'runs.json';
 
+/** Local recent-requests ledger filename (feedback `--last` context source) */
+export const RECENT_REQUESTS_FILENAME = 'recent-requests.json';
+
 // Token settings
 
 /** Prefix for CLI auth tokens */
@@ -111,6 +114,11 @@ export function getConfigPath(): string {
 /** Get the local bundle run ledger path */
 export function getRunLedgerPath(): string {
   return path.join(getFintermDir(), RUN_LEDGER_FILENAME);
+}
+
+/** Get the local recent-requests ledger path */
+export function getRecentRequestsPath(): string {
+  return path.join(getFintermDir(), RECENT_REQUESTS_FILENAME);
 }
 
 // Directory setup

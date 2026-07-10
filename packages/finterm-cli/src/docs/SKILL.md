@@ -209,6 +209,8 @@ Run `finterm tool <id> --help` before adding flags.
 - `finterm feedback feature-request "<summary>"` - Request a missing capability
 - Context flags: `--command`, `--tool`, `--error-code`, `--request-id` (repeatable),
   `--body` / `--body-file`; preview with the global `--dry-run`
+- `--last` - Auto-attach context from the most recent recorded API call (explicit
+  flags win; still previewed before sending)
 
 ## Global Options
 

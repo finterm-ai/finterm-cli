@@ -15,6 +15,11 @@
 - Root `--help` now points at the feedback channel, and service-fault errors
   (upstream 5xx, `RUNTIME_*`, tool failures) suggest `finterm feedback bug` with the
   failing `request_id`.
+- New local recent-requests ledger (`~/.finterm/recent-requests.json`) records the
+  last 20 API call outcomes (command, tool, error code, `request_id`), and
+  `finterm feedback ... --last` attaches the most recent failed call's context
+  automatically — explicit flags win, and the payload is still previewed before
+  sending.
 
 ## 0.3.1
 

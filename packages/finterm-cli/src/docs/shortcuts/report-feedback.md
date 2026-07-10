@@ -54,6 +54,9 @@ and summarize exactly what will be shared, field by field:
 - Always attach the failing command (`--command`) and the `request_id` from the error
   envelope (`--request-id`) — both are in your transcript, and they let the team
   correlate your report with server logs.
+- `--last` fills those context fields automatically from the most recent recorded API
+  call (preferring the last failed one); explicit flags always win, and the payload is
+  still previewed and confirmed before sending.
 - Never include secrets; the CLI rejects obvious token shapes in the body, but the
   payload preview is your real review step.
 
