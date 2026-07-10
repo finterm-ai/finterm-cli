@@ -9,6 +9,9 @@
  *      package — published deps must resolve from the public registry.
  *   3. No file matches a generic credential shape (AWS/GitHub/OpenAI keys or a
  *      PEM private key block).
+ *   4. No file carries an internal work-tracker reference (`fin-xxxx` ids):
+ *      issue tracking lives outside this repo, so tracker ids in source,
+ *      docs, or comments are always stale noise here.
  *
  * On success it prints a single summary line; on failure it prints the
  * offending items and exits non-zero.
@@ -165,6 +168,8 @@ for (const file of files) {
 }
 
 // 3. Generic credential-shape scan over text files.
+// 4. Internal work-tracker ids (issue tracking lives outside this repo).
+const trackerIdPattern = /\bfin-[0-9a-z]{4,}\b/;
 for (const file of files) {
   const rel = normalize(relative(root, file));
   if (secretScanAllowlist.has(rel) || !isTextFile(file)) {
@@ -175,6 +180,10 @@ for (const file of files) {
     if (regex.test(text)) {
       violations.push(`${rel}: matches ${label} pattern`);
     }
+  }
+  const trackerMatch = trackerIdPattern.exec(text);
+  if (trackerMatch) {
+    violations.push(`${rel}: internal work-tracker reference "${trackerMatch[0]}"`);
   }
 }
 

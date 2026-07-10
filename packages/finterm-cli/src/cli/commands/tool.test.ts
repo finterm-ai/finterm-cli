@@ -18,7 +18,7 @@ describe('createToolCommand', () => {
     }
   });
 
-  it('marks every mandatory option as (required) in its help text (fin-54w1)', () => {
+  it('marks every mandatory option as (required) in its help text', () => {
     const command = createToolCommand({ experimental: true });
 
     for (const subcommand of command.commands) {
@@ -34,7 +34,7 @@ describe('createToolCommand', () => {
   });
 });
 
-describe('parseAsOfDate (fin-27bn)', () => {
+describe('parseAsOfDate', () => {
   it('accepts a real calendar date', () => {
     expect(parseAsOfDate('2026-07-07')).toBe('2026-07-07');
   });

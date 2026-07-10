@@ -5,9 +5,9 @@
 ### Breaking
 
 - The deep-research bundle id is now `company_deep_research` (renamed server-side
-  from `company_web_research`, finterm-main `feat(api)!`): commands, agent docs,
-  and the mock client all use the new id. The old id 404s once the API deploys
-  the rename — there is no alias layer.
+  from `company_web_research`): commands, agent docs, and the mock client all use
+  the new id. The old id 404s once the API deploys the rename — there is no alias
+  layer.
 
 ## 0.2.2
 
