@@ -146,7 +146,9 @@ export async function resolveFeedbackBody(
       throw new CLIError(`Could not read --body-file ${options.bodyFile}: ${reason}`);
     }
   }
-  if (body === undefined) {
+  // An explicitly blank body (`--body ""`, an empty file) means "no body":
+  // sending `body: ""` is never what the caller intended (QA finding).
+  if (body === undefined || body.trim().length === 0) {
     return undefined;
   }
   if (body.length > MAX_FEEDBACK_BODY_LENGTH) {

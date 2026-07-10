@@ -106,6 +106,11 @@ describe('resolveFeedbackBody', () => {
     await expect(resolveFeedbackBody({ body: 'details' })).resolves.toBe('details');
   });
 
+  it('treats an explicitly blank body as no body (QA finding)', async () => {
+    await expect(resolveFeedbackBody({ body: '' })).resolves.toBeUndefined();
+    await expect(resolveFeedbackBody({ body: '   \n' })).resolves.toBeUndefined();
+  });
+
   it('reads --body-file from disk', async () => {
     const file = join(tempDir(), 'body.md');
     writeFileSync(file, '# What happened\nIt broke.');
