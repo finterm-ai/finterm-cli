@@ -9,9 +9,9 @@
  *      package — published deps must resolve from the public registry.
  *   3. No file matches a generic credential shape (AWS/GitHub/OpenAI keys or a
  *      PEM private key block).
- *   4. No file carries an internal work-tracker reference (`fin-xxxx` ids):
- *      issue tracking lives outside this repo, so tracker ids in source,
- *      docs, or comments are always stale noise here.
+ *   4. No file carries an internal work-tracker reference (short prefixed
+ *      ticket ids): issue tracking lives outside this repo, so tracker ids in
+ *      source, docs, or comments are always stale noise here.
  *
  * On success it prints a single summary line; on failure it prints the
  * offending items and exits non-zero.
