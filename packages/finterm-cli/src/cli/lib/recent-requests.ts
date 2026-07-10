@@ -1,20 +1,23 @@
 /**
  * Local recent-requests ledger (`~/.finterm/recent-requests.json`).
  *
- * Records the last few API call outcomes — command line, tool, error code,
- * request id — so `finterm feedback bug --last` can attach the failing call's
- * context automatically (Phase 2 of the user feedback loop). Modeled on the
- * runs ledger in bundle-runs.ts: atomic writes, corruption-tolerant reads.
+ * Records the last few API call outcomes — command line, tool, outcome, error
+ * code, request id — so `finterm feedback bug --last` can attach the failing
+ * call's context automatically. Modeled on the runs ledger in bundle-runs.ts:
+ * atomic writes, corruption-tolerant reads, plus a cross-process lock so
+ * parallel CLI invocations do not drop each other's entries.
  *
  * This is disposable diagnostics, not user data: recording is best-effort and
- * must never fail (or slow) the command that triggered it, and a corrupt file
- * is silently replaced.
+ * must never fail (or slow) the command that triggered it, a corrupt file is
+ * silently replaced, command lines are secret-redacted BEFORE they reach
+ * disk, and the file itself is written `0600`.
  */
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 
 import { getRecentRequestsPath } from '../../cli-io/settings.js';
 import { isExpectedFsError } from './errors.js';
 import { writeFile } from './fs.js';
+import { redactSecretLikeContent } from './secret-scrub.js';
 import type { FintermWireResult } from './wire-result.js';
 
 /** Current on-disk schema version for the recent-requests ledger. */
@@ -26,14 +29,31 @@ export const MAX_RECENT_REQUESTS = 20;
 /** Pretty-print spaces for the ledger JSON, matching the runs ledger. */
 const JSON_PRETTY_PRINT_SPACES = 2;
 
+/** Owner-only mode for the ledger file: command lines can be sensitive. */
+const LEDGER_FILE_MODE = 0o600;
+
+/** How long one lock attempt waits before retrying (ms). */
+const LOCK_RETRY_DELAY_MS = 15;
+
+/** Total budget for acquiring the ledger lock before giving up (best-effort). */
+const LOCK_ACQUIRE_BUDGET_MS = 300;
+
+/** A lock directory older than this is from a dead process; steal it. */
+const LOCK_STALE_MS = 2000;
+
+/** How a recorded call ended. */
+export type RecentRequestOutcome = 'ok' | 'error' | 'transport_error';
+
 /** One recorded API call outcome. */
 export interface RecentRequestEntry {
   /** ISO timestamp of the call. */
   at: string;
-  /** The finterm command line that made the call (sanitized argv). */
+  /** The finterm command line that made the call (secret-redacted argv). */
   command: string;
-  /** The snake_case tool id from the wire envelope. */
+  /** The snake_case tool id from the wire envelope (or fallback meta). */
   tool: string;
+  /** How the call ended: wire success, wire error, or transport failure. */
+  outcome: RecentRequestOutcome;
   /** The wire error code, present only when the call failed. */
   errorCode?: string;
   /** The server request id, when the envelope carried one. */
@@ -48,6 +68,8 @@ interface RecentRequestsFile {
 function asObject(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
 }
+
+const VALID_OUTCOMES: ReadonlySet<string> = new Set(['ok', 'error', 'transport_error']);
 
 /** Tolerate any on-disk shape: keep only well-formed entries, else start fresh. */
 function normalizeFile(value: unknown): RecentRequestsFile {
@@ -65,10 +87,18 @@ function normalizeFile(value: unknown): RecentRequestsFile {
     ) {
       continue;
     }
+    // Entries from before the outcome field default from the error code.
+    const outcome =
+      typeof entry.outcome === 'string' && VALID_OUTCOMES.has(entry.outcome)
+        ? (entry.outcome as RecentRequestOutcome)
+        : typeof entry.errorCode === 'string'
+          ? 'error'
+          : 'ok';
     requests.push({
       at: entry.at,
       command: entry.command,
       tool: entry.tool,
+      outcome,
       ...(typeof entry.errorCode === 'string' ? { errorCode: entry.errorCode } : {}),
       ...(typeof entry.requestId === 'string' ? { requestId: entry.requestId } : {}),
     });
@@ -91,10 +121,11 @@ async function readFileTolerant(ledgerPath: string): Promise<RecentRequestsFile>
 
 /**
  * Reconstruct the user-facing `finterm ...` command line from argv, without
- * the interpreter and script path.
+ * the interpreter and script path, with secret-shaped substrings redacted so
+ * a token typed into a flag never reaches disk.
  */
 export function commandLineFromArgv(argv: readonly string[] = process.argv): string {
-  return ['finterm', ...argv.slice(2)].join(' ');
+  return redactSecretLikeContent(['finterm', ...argv.slice(2)].join(' '));
 }
 
 /**
@@ -110,22 +141,93 @@ export function buildRecentRequestEntry(
     at: new Date().toISOString(),
     command: commandLineFromArgv(argv),
     tool: result.finterm.tool,
+    outcome: 'error' in result ? 'error' : 'ok',
     ...('error' in result ? { errorCode: result.error.code } : {}),
     ...(typeof requestId === 'string' ? { requestId } : {}),
   };
 }
 
 /**
- * Prepend one entry, trim to {@link MAX_RECENT_REQUESTS}, write atomically.
- * Best-effort by contract: any failure is swallowed — the diagnostics ledger
- * must never break the data command that fed it.
+ * Build a ledger entry for a call that never produced a wire result at all —
+ * a timeout, DNS/socket failure, or unparseable response. There is no request
+ * id to correlate, but the failing command itself is exactly what a feedback
+ * report needs.
+ */
+export function buildTransportFailureEntry(
+  tool: string,
+  error: unknown,
+  argv: readonly string[] = process.argv
+): RecentRequestEntry {
+  return {
+    at: new Date().toISOString(),
+    command: commandLineFromArgv(argv),
+    tool,
+    outcome: 'transport_error',
+    errorCode: error instanceof Error && error.name.length > 0 ? error.name : 'TransportError',
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Cross-process mutual exclusion via an atomic `mkdir` lock next to the
+ * ledger. Best-effort: a lock that cannot be acquired inside the budget means
+ * the write is skipped (losing one diagnostics entry beats blocking a data
+ * command), and stale locks from dead processes are stolen after a timeout.
+ */
+async function withLedgerLock(ledgerPath: string, fn: () => Promise<void>): Promise<boolean> {
+  const lockPath = `${ledgerPath}.lock`;
+  const deadline = Date.now() + LOCK_ACQUIRE_BUDGET_MS;
+  let acquiredAt: number | null = null;
+  while (Date.now() < deadline) {
+    try {
+      await mkdir(lockPath);
+      acquiredAt = Date.now();
+      break;
+    } catch {
+      // Lock held: steal it if it looks abandoned, otherwise wait and retry.
+      try {
+        const info = await stat(lockPath);
+        if (Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+          await rm(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch {
+        // Raced with the holder's release; retry immediately.
+        continue;
+      }
+      await sleep(LOCK_RETRY_DELAY_MS);
+    }
+  }
+  if (acquiredAt === null) {
+    return false;
+  }
+  try {
+    await fn();
+  } finally {
+    await rm(lockPath, { recursive: true, force: true });
+  }
+  return true;
+}
+
+/**
+ * Prepend one entry, trim to {@link MAX_RECENT_REQUESTS}, write atomically
+ * (`0600`) under the cross-process lock. Best-effort by contract: any failure
+ * is swallowed — the diagnostics ledger must never break the data command
+ * that fed it.
  */
 export async function recordRecentRequest(entry: RecentRequestEntry): Promise<void> {
   try {
     const ledgerPath = getRecentRequestsPath();
-    const ledger = await readFileTolerant(ledgerPath);
-    ledger.requests = [entry, ...ledger.requests].slice(0, MAX_RECENT_REQUESTS);
-    await writeFile(ledgerPath, JSON.stringify(ledger, null, JSON_PRETTY_PRINT_SPACES));
+    await withLedgerLock(ledgerPath, async () => {
+      const ledger = await readFileTolerant(ledgerPath);
+      ledger.requests = [entry, ...ledger.requests].slice(0, MAX_RECENT_REQUESTS);
+      await writeFile(ledgerPath, JSON.stringify(ledger, null, JSON_PRETTY_PRINT_SPACES), {
+        mode: LEDGER_FILE_MODE,
+      });
+    });
   } catch {
     // Best-effort: never propagate.
   }
@@ -144,5 +246,5 @@ export async function listRecentRequests(): Promise<RecentRequestEntry[]> {
  */
 export async function pickLastRequestForFeedback(): Promise<RecentRequestEntry | null> {
   const requests = await listRecentRequests();
-  return requests.find((entry) => entry.errorCode !== undefined) ?? requests[0] ?? null;
+  return requests.find((entry) => entry.outcome !== 'ok') ?? requests[0] ?? null;
 }

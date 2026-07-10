@@ -97,6 +97,16 @@ describe('humanWireErrorLines', () => {
     expect(lines).toHaveLength(3);
   });
 
+  it('prints the server request id when the envelope carried one', () => {
+    const lines = humanWireErrorLines(
+      { code: 'RUNTIME_UNAVAILABLE', message: 'down' },
+      'req_abc123'
+    );
+    expect(lines.join('\n')).toContain('(request id: req_abc123)');
+    const without = humanWireErrorLines({ code: 'RUNTIME_UNAVAILABLE', message: 'down' });
+    expect(without.join('\n')).not.toContain('request id');
+  });
+
   it('offers the in-product report on service faults (user feedback loop)', () => {
     // Synthesized upstream 5xx and every RUNTIME_*/tool-fault class carry the
     // `finterm feedback bug` affordance; caller-input errors do not.
@@ -112,6 +122,7 @@ describe('humanWireErrorLines', () => {
       const text = humanWireErrorLines({ code, message: 'It broke.' }).join('\n');
       expect(text, code).toContain(REPORT_FEEDBACK_LINE);
       expect(text, code).toContain('finterm feedback bug');
+      expect(text, code).toContain('--last');
     }
     for (const code of ['UPSTREAM_HTTP_404', 'VALIDATION_ERROR', 'TOKEN_MISSING']) {
       const text = humanWireErrorLines({ code, message: 'Bad input.' }).join('\n');

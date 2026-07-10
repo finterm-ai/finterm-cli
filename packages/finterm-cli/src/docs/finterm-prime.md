@@ -17,8 +17,10 @@ finterm docs              # Full CLI documentation
 
 ## Paid Model
 
-Every authenticated API call requires Finterm Pro; activate at
+Every authenticated data/tool call requires Finterm Pro; activate at
 https://app.finterm.ai/pricing (pricing and trial terms are stated there).
+Exceptions that work with any authenticated key: `finterm auth status` and
+`finterm feedback`.
 A non-Pro call fails with 402 `SUBSCRIPTION_REQUIRED` (machine-readable
 `error.upgrade_url` under `--json`): do not retry in a loop — relay the upgrade URL to
 your operator, then re-run after checkout (access activates automatically).

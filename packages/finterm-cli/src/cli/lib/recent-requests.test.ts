@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mergeLastRequestContext } from '../commands/feedback.js';
 import {
   buildRecentRequestEntry,
+  buildTransportFailureEntry,
   commandLineFromArgv,
   listRecentRequests,
   MAX_RECENT_REQUESTS,
@@ -32,6 +33,7 @@ function entry(overrides: Partial<RecentRequestEntry> = {}): RecentRequestEntry 
     at: '2026-07-10T00:00:00.000Z',
     command: 'finterm tool ticker_sentiment META',
     tool: 'ticker_sentiment',
+    outcome: overrides.errorCode !== undefined ? 'error' : 'ok',
     ...overrides,
   };
 }
@@ -82,6 +84,24 @@ describe('recent-requests ledger', () => {
     vi.stubEnv('FINTERM_CONFIG', '/nonexistent/finterm-dir');
     await expect(recordRecentRequest(entry())).resolves.toBeUndefined();
   });
+
+  it('writes the ledger owner-readable only (0600)', async () => {
+    await recordRecentRequest(entry());
+    const { statSync } = await import('node:fs');
+    const mode = statSync(join(fintermDir, 'recent-requests.json')).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it('keeps every entry under concurrent recording (cross-process lock)', async () => {
+    const CONCURRENT_WRITES = 10;
+    await Promise.all(
+      Array.from({ length: CONCURRENT_WRITES }, (_, i) =>
+        recordRecentRequest(entry({ requestId: `req_${i}` }))
+      )
+    );
+    const requests = await listRecentRequests();
+    expect(requests).toHaveLength(CONCURRENT_WRITES);
+  });
 });
 
 describe('buildRecentRequestEntry', () => {
@@ -126,6 +146,29 @@ describe('buildRecentRequestEntry', () => {
       'finterm feedback bug oops'
     );
   });
+
+  it('redacts secret-shaped substrings before they reach disk', () => {
+    const token = `${'fint_auth_'}abcdefghij1234567890`;
+    const command = commandLineFromArgv(['node', '/x/bin.js', 'auth', 'login', token]);
+    expect(command).not.toContain(token);
+    expect(command).toContain('[redacted]');
+  });
+
+  it('builds a transport_error entry for calls with no wire result', () => {
+    const built = buildTransportFailureEntry('ticker_sentiment', new Error('socket hang up'), [
+      'node',
+      '/x/bin.js',
+      'tool',
+      'ticker_sentiment',
+      'META',
+    ]);
+    expect(built).toMatchObject({
+      tool: 'ticker_sentiment',
+      outcome: 'transport_error',
+      command: 'finterm tool ticker_sentiment META',
+    });
+    expect(built).not.toHaveProperty('requestId');
+  });
 });
 
 describe('pickLastRequestForFeedback', () => {
@@ -154,6 +197,7 @@ describe('mergeLastRequestContext', () => {
     at: '2026-07-10T00:00:00.000Z',
     command: 'finterm tool sec_filings_search BRK.B',
     tool: 'sec_filings_search',
+    outcome: 'error',
     errorCode: 'RUNTIME_UNAVAILABLE',
     requestId: 'req_last',
   };

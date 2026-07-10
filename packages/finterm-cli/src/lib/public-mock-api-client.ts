@@ -198,11 +198,12 @@ class PublicMockAPIClient implements FintermAPIClient {
 
   async submitFeedback(submission: FeedbackSubmission): Promise<FeedbackAckWireResponse> {
     // Deterministic id (keyed by kind, no clock) so test output is stable.
+    // `args: {}` matches the live handler's non-tool envelope exactly.
     return {
       finterm: {
         schema: 'finterm.result:FeedbackAck/v1',
         tool: 'feedback',
-        args: { kind: submission.kind },
+        args: {},
       },
       data: {
         feedback_id: `fb_mock_${submission.kind}`,

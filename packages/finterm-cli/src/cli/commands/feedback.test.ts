@@ -12,9 +12,11 @@ import {
   buildFeedbackSubmission,
   feedbackCommand,
   findSecretLikeContent,
-  MAX_FEEDBACK_BODY_LENGTH,
+  MAX_FEEDBACK_BODY_BYTES,
+  MAX_FEEDBACK_CONTEXT_FIELD_LENGTH,
   MAX_FEEDBACK_REQUEST_IDS,
   MAX_FEEDBACK_SUMMARY_LENGTH,
+  parseFeedbackAck,
   parseFeedbackSummary,
   resolveFeedbackBody,
 } from './feedback.js';
@@ -95,6 +97,12 @@ describe('parseFeedbackSummary', () => {
       /--body/
     );
   });
+
+  it('rejects newlines and control characters (one line means one line)', () => {
+    for (const bad of ['line one\nline two', 'carriage\rreturn', 'null\u0000byte']) {
+      expect(() => parseFeedbackSummary(bad), JSON.stringify(bad)).toThrow(InvalidArgumentError);
+    }
+  });
 });
 
 describe('resolveFeedbackBody', () => {
@@ -134,10 +142,45 @@ describe('resolveFeedbackBody', () => {
     );
   });
 
-  it('rejects a body over 16 KB', async () => {
+  it('rejects a body over the byte limit', async () => {
     await expect(
-      resolveFeedbackBody({ body: 'x'.repeat(MAX_FEEDBACK_BODY_LENGTH + 1) })
-    ).rejects.toThrow(/16 KB/);
+      resolveFeedbackBody({ body: 'x'.repeat(MAX_FEEDBACK_BODY_BYTES + 1) })
+    ).rejects.toThrow(/16 KiB/);
+  });
+
+  it('counts bytes, not characters, for multibyte bodies', async () => {
+    // Each 'é' is 2 UTF-8 bytes: half the limit in characters exceeds it in bytes.
+    await expect(
+      resolveFeedbackBody({ body: 'é'.repeat(MAX_FEEDBACK_BODY_BYTES / 2 + 1) })
+    ).rejects.toThrow(/16 KiB/);
+  });
+
+  it('rejects an oversized --body-file from its size alone (no unbounded read)', async () => {
+    const file = join(tempDir(), 'huge.md');
+    writeFileSync(file, 'x'.repeat(MAX_FEEDBACK_BODY_BYTES + 1));
+    await expect(resolveFeedbackBody({ bodyFile: file })).rejects.toThrow(/16 KiB/);
+  });
+
+  it('aborts an over-limit stdin stream mid-read', async () => {
+    async function* flood(): AsyncGenerator<Buffer> {
+      // Two chunks that together exceed the cap; the reader must stop there.
+      yield Buffer.alloc(MAX_FEEDBACK_BODY_BYTES, 'x');
+      yield Buffer.alloc(2, 'x');
+      throw new Error('reader kept consuming past the limit');
+    }
+    const readStdin = async (): Promise<string> => {
+      const chunks: Buffer[] = [];
+      let total = 0;
+      for await (const chunk of flood()) {
+        total += chunk.length;
+        if (total > MAX_FEEDBACK_BODY_BYTES) {
+          throw new Error(`Body is ${total} bytes; the limit is 16 KiB`);
+        }
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks).toString('utf-8');
+    };
+    await expect(resolveFeedbackBody({ bodyFile: '-' }, readStdin)).rejects.toThrow(/16 KiB/);
   });
 });
 
@@ -149,10 +192,12 @@ describe('buildFeedbackSubmission', () => {
       options: {},
       cliVersion: '1.2.3',
       platform: 'linux-x64',
+      submissionId: 'sub-fixed',
     });
     expect(submission).toEqual({
       kind: 'bug',
       summary: 'It broke',
+      submission_id: 'sub-fixed',
       context: { cli_version: '1.2.3', platform: 'linux-x64' },
     });
   });
@@ -180,6 +225,30 @@ describe('buildFeedbackSubmission', () => {
       error_code: 'RATE_LIMITED',
       request_ids: ['req_1', 'req_2'],
     });
+  });
+
+  it('caps each context flag at the wire limit, naming the flag', () => {
+    expect(() =>
+      buildFeedbackSubmission({
+        kind: 'bug',
+        summary: 'caps',
+        options: { command: 'x'.repeat(MAX_FEEDBACK_CONTEXT_FIELD_LENGTH + 1) },
+      })
+    ).toThrow(/--command/);
+    expect(() =>
+      buildFeedbackSubmission({
+        kind: 'bug',
+        summary: 'caps',
+        options: { requestId: ['x'.repeat(65)] },
+      })
+    ).toThrow(/Request ids/);
+  });
+
+  it('generates a fresh submission_id per invocation (idempotency key)', () => {
+    const first = buildFeedbackSubmission({ kind: 'bug', summary: 'a', options: {} });
+    const second = buildFeedbackSubmission({ kind: 'bug', summary: 'a', options: {} });
+    expect(first.submission_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(first.submission_id).not.toBe(second.submission_id);
   });
 
   it('rejects more than the request-id cap', () => {
@@ -221,11 +290,73 @@ describe('secret scrub', () => {
       assertNoSecretLikeContent({
         kind: 'bug',
         summary: 'clean',
+        submission_id: 'sub-1',
         body: 'here is fint_auth_abcdefghij1234567890',
       });
     }).toThrow(/body/);
     expect(() => {
-      assertNoSecretLikeContent({ kind: 'bug', summary: 'clean', body: 'also clean' });
+      assertNoSecretLikeContent({
+        kind: 'bug',
+        summary: 'clean',
+        submission_id: 'sub-2',
+        body: 'also clean',
+      });
     }).not.toThrow();
+  });
+});
+
+describe('secret scrub covers context fields (including --last merges)', () => {
+  it('flags a secret hiding in context.command', () => {
+    expect(() => {
+      assertNoSecretLikeContent({
+        kind: 'bug',
+        summary: 'clean',
+        submission_id: 'sub-3',
+        context: {
+          cli_version: '1.0.0',
+          platform: 'linux-x64',
+          command: `finterm auth login ${'fint_auth_'}abcdefghij1234567890`,
+        },
+      });
+    }).toThrow(/context\.command/);
+  });
+
+  it('flags a secret hiding in context.request_ids', () => {
+    expect(() => {
+      assertNoSecretLikeContent({
+        kind: 'bug',
+        summary: 'clean',
+        submission_id: 'sub-4',
+        context: { request_ids: [`${'sk-'}${'a'.repeat(24)}`] },
+      });
+    }).toThrow(/context\.request_ids/);
+  });
+});
+
+describe('parseFeedbackAck (strict ack contract)', () => {
+  const GOOD = {
+    finterm: { schema: 'finterm.result:FeedbackAck/v1', tool: 'feedback', args: {} },
+    data: { feedback_id: 'fb_x', status: 'received' },
+  };
+
+  it('accepts the exact ack envelope', () => {
+    expect(parseFeedbackAck(GOOD)).toEqual({ feedback_id: 'fb_x', status: 'received' });
+  });
+
+  it('rejects a bare/wrong-schema 200 instead of claiming success', () => {
+    const bad = [
+      { finterm: GOOD.finterm, data: {} },
+      { finterm: GOOD.finterm, data: { feedback_id: '', status: 'received' } },
+      { finterm: GOOD.finterm, data: { feedback_id: 'fb_x', status: 'queued' } },
+      {
+        finterm: { schema: 'finterm.result:Other/v1', tool: 'feedback', args: {} },
+        data: GOOD.data,
+      },
+    ];
+    for (const wire of bad) {
+      expect(() => parseFeedbackAck(wire), JSON.stringify(wire)).toThrow(
+        /feedback acknowledgement/
+      );
+    }
   });
 });

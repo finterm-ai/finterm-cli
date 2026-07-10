@@ -29,9 +29,12 @@ intentional.
 
 ## Account, Plan, and the Paywall
 
-Finterm is a paid product: every authenticated API call requires **Finterm Pro** (there
-is no free API tier). A new account activates Pro at https://app.finterm.ai/pricing —
-current pricing and trial terms are stated there.
+Finterm is a paid product: every authenticated **data/tool** call requires **Finterm
+Pro** (there is no free data tier). A new account activates Pro at
+https://app.finterm.ai/pricing — current pricing and trial terms are stated there.
+Two account-level surfaces work with any authenticated key, Pro or not:
+`finterm auth status` (plan state) and `finterm feedback` (bugs, questions, feature
+requests).
 
 - `finterm auth login` needs the human once, in a browser. Headless runs can use a
   dashboard-minted key via `FINTERM_API_KEY` instead.

@@ -48,11 +48,13 @@ export const KEY_ROTATION_LINE =
 /**
  * In-product report affordance on service-fault errors (the user feedback
  * loop): the moment something looks broken is exactly when a report is
- * cheapest to file and most useful to receive.
+ * cheapest to file and most useful to receive. `--last` attaches this failing
+ * call's recorded context (command, error code, request id) automatically, so
+ * the line never asks for an id the user cannot see.
  */
 export const REPORT_FEEDBACK_LINE =
-  'If this looks wrong, report it: `finterm feedback bug "<summary>" --request-id <id>` ' +
-  '(the request id is in the error envelope).';
+  'If this looks wrong, report it: `finterm feedback bug "<summary>" --last` ' +
+  'attaches this failing call automatically.';
 
 /** The wire error fields the human renderer consumes. */
 export interface WireErrorLike {
@@ -135,11 +137,15 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
 
 /**
  * Build the human error block as unstyled lines (exported for tests; the
- * printer applies color).
+ * printer applies color). The server request id, when present, is printed so
+ * a report or support mail can quote it.
  */
-export function humanWireErrorLines(error: WireErrorLike): string[] {
+export function humanWireErrorLines(error: WireErrorLike, requestId?: string): string[] {
   const shape = shapeFor(error);
   const lines = [`${ICONS.ERROR} ${shape.title}`, `  ${error.message}`, `  (code: ${error.code})`];
+  if (requestId !== undefined && requestId.length > 0) {
+    lines.push(`  (request id: ${requestId})`);
+  }
   for (const remedy of shape.remedy) {
     lines.push(remedy === '' ? '' : `  ${remedy}`);
   }
@@ -180,13 +186,16 @@ async function confirmOnStderr(question: string): Promise<boolean> {
 export async function printHumanWireError(
   ctx: CommandContext,
   output: OutputManager,
-  error: WireErrorLike
+  error: WireErrorLike,
+  requestId?: string
 ): Promise<void> {
   const colors = output.getColors();
-  const [title = '', ...rest] = humanWireErrorLines(error);
+  const [title = '', ...rest] = humanWireErrorLines(error, requestId);
   console.error(colors.error(title));
   for (const line of rest) {
-    console.error(line.startsWith('  (code:') ? colors.dim(line) : line);
+    console.error(
+      line.startsWith('  (code:') || line.startsWith('  (request id:') ? colors.dim(line) : line
+    );
   }
 
   if (error.code === 'SUBSCRIPTION_REQUIRED' && canPromptForBrowser(ctx)) {

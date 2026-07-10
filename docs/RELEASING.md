@@ -215,3 +215,12 @@ publish, so you can dry-run the release pipeline on a branch without uploading a
 
 <!-- This document follows common-doc-guidelines.md.
 -->
+
+## Server-First Sequencing
+
+Commands that call new API endpoints ship only after those endpoints are live in
+production. The release workflow enforces this mechanically: before publishing, it
+fetches `https://api.finterm.ai/api/v1/openapi.json` and fails the release if a path
+the CLI depends on (currently `/api/v1/feedback` and `/api/v1/account`) is missing.
+If that gate fails, deploy the server side first, confirm the path appears in the
+production OpenAPI document, then re-run the release.

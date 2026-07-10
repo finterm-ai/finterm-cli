@@ -144,6 +144,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Ceiling on a server-stated Retry-After wait, so a bad header cannot stall the CLI. */
+const MAX_RETRY_AFTER_MS = 30000;
+
+/** Milliseconds per second, for Retry-After header conversion. */
+const MS_PER_SECOND = 1000;
+
+/**
+ * Parse a Retry-After header's delta-seconds form to milliseconds. Returns
+ * null for absent, non-numeric (HTTP-date form), or non-positive values —
+ * callers then fall back to the exponential schedule.
+ */
+export function parseRetryAfterMs(headerValue: string | null): number | null {
+  if (headerValue === null) {
+    return null;
+  }
+  const seconds = Number(headerValue.trim());
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  return Math.ceil(seconds * MS_PER_SECOND);
+}
+
 /** Error body shared by every wire response envelope. */
 export interface WireErrorBody {
   code: string;
@@ -234,6 +256,12 @@ export interface FeedbackSubmission {
   kind: FeedbackKind;
   /** One-line summary, at most 200 characters. */
   summary: string;
+  /**
+   * Client-generated idempotency id (one per user invocation): transport
+   * retries after an ambiguous outcome re-send the same id, and the server
+   * returns the original ack instead of storing a duplicate report.
+   */
+  submission_id: string;
   /** Optional Markdown detail, at most 16 KB. */
   body?: string;
   context?: FeedbackContext;
@@ -893,7 +921,15 @@ class LiveFintermAPIClient implements FintermAPIClient {
             const errorData = { status: response.status, ...errorBody };
             if (shouldRetry(errorData, attempt)) {
               lastError = errorData;
-              const backoff = calculateBackoff(attempt);
+              // A server-stated Retry-After (rate limits) overrides the
+              // exponential schedule: retrying sooner only adds blocked
+              // traffic against a limiter that already told us when to come
+              // back. Capped so a hostile/buggy header cannot stall the CLI.
+              const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+              const backoff =
+                retryAfterMs !== null
+                  ? Math.min(retryAfterMs, MAX_RETRY_AFTER_MS)
+                  : calculateBackoff(attempt);
               await sleep(backoff);
               continue;
             }
@@ -1003,6 +1039,7 @@ class LiveFintermAPIClient implements FintermAPIClient {
     const body: Record<string, unknown> = {
       kind: submission.kind,
       summary: submission.summary,
+      submission_id: submission.submission_id,
     };
     if (submission.body !== undefined) {
       body.body = submission.body;
