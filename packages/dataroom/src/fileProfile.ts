@@ -124,7 +124,7 @@ export async function openFileProfileRoom(inputPath: string): Promise<FileProfil
   if (missing.length > 0) {
     throw new ValidationError(
       `Invalid ${ROOM_METADATA_FILE}`,
-      missing.map((key) => `missing ${key}`)
+      missing.map((key) => `missing ${key}`),
     );
   }
 
@@ -202,7 +202,7 @@ export function listFileProfileFiles(room: FileProfileRoom): FileProfileFile[] {
  */
 export function queryFileProfileFiles(
   room: FileProfileRoom,
-  options: QueryFilesOptions = {}
+  options: QueryFilesOptions = {},
 ): FileQueryResult[] {
   const pathPrefix = options.pathPrefix?.replace(new RegExp(`^${FILES_DIR}/`), '');
   const limit = options.limit ?? Number.POSITIVE_INFINITY;
@@ -240,7 +240,7 @@ export function queryFileProfileFiles(
 export function buildFileProfileFile(
   room: FileProfileRoom,
   relativePath: string,
-  stats?: Stats
+  stats?: Stats,
 ): FileProfileFile | undefined {
   let normalizedRelativePath: string;
   try {
@@ -294,11 +294,11 @@ function getFileDigest(
   room: FileProfileRoom,
   relativePath: string,
   fullPath: string,
-  stats: Stats
+  stats: Stats,
 ): string {
   const cache = getFileDigestCache(room);
   const cached = cache.get(relativePath);
-  if (cached && cached.size === stats.size && cached.mtimeMs === stats.mtimeMs) {
+  if (cached?.size === stats.size && cached.mtimeMs === stats.mtimeMs) {
     return cached.digest;
   }
 
@@ -329,7 +329,7 @@ function getFileDigestCache(room: FileProfileRoom): Map<string, FileDigestCacheE
 export async function readFileProfileArtifact(
   room: FileProfileRoom,
   ref: ArtifactRef | string,
-  options: ArtifactReadOptions = {}
+  options: ArtifactReadOptions = {},
 ): Promise<ArtifactReadResult> {
   const parsed = parseArtifactRef(ref);
   if (parsed.kind !== 'file') {
@@ -371,7 +371,7 @@ export async function readFileProfileArtifact(
 export async function searchFileProfileFiles(
   room: FileProfileRoom,
   query: string,
-  options: FileProfileSearchOptions = {}
+  options: FileProfileSearchOptions = {},
 ): Promise<FileProfileSearchMatch[]> {
   const limit = options.limit ?? 20;
   const pathPrefix = options.pathPrefix?.replace(new RegExp(`^${FILES_DIR}/`), '');
@@ -379,13 +379,23 @@ export async function searchFileProfileFiles(
   const matches: FileProfileSearchMatch[] = [];
 
   for (const file of listFileProfileFiles(room)) {
-    if (matches.length >= limit) break;
-    if (pathPrefix && !file.path.startsWith(pathPrefix)) continue;
-    if (!matchesFacetFilters(file.facets, options.facets)) continue;
-    if (!isTextContentType(file.contentType)) continue;
+    if (matches.length >= limit) {
+      break;
+    }
+    if (pathPrefix && !file.path.startsWith(pathPrefix)) {
+      continue;
+    }
+    if (!matchesFacetFilters(file.facets, options.facets)) {
+      continue;
+    }
+    if (!isTextContentType(file.contentType)) {
+      continue;
+    }
 
     const match = await findTextMatch(file.absolutePath, needle);
-    if (!match) continue;
+    if (!match) {
+      continue;
+    }
     matches.push({
       roomId: file.roomId,
       ref: file.ref,
@@ -404,7 +414,7 @@ export async function searchFileProfileFiles(
 function scanFileProfileDirectory(
   room: FileProfileRoom,
   directory: string,
-  results: FileProfileFile[]
+  results: FileProfileFile[],
 ): void {
   let entries: Dirent[];
   try {
@@ -440,7 +450,7 @@ function scanFileProfileDirectory(
 
 function loadFileProfileMetadata(
   absolutePath: string,
-  relativePath: string
+  relativePath: string,
 ): FileProfileMetadata | undefined {
   const sidecar = loadSidecarMetadata(absolutePath);
   const frontmatter = loadMarkdownFrontmatter(absolutePath, relativePath);
@@ -467,7 +477,7 @@ function loadSidecarMetadata(absolutePath: string): Record<string, unknown> {
 
 function loadMarkdownFrontmatter(
   absolutePath: string,
-  relativePath: string
+  relativePath: string,
 ): Record<string, unknown> {
   if (!['.md', '.markdown'].includes(extname(relativePath).toLowerCase())) {
     return {};
@@ -475,7 +485,9 @@ function loadMarkdownFrontmatter(
   try {
     const raw = readFileSync(absolutePath, 'utf-8');
     const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
-    if (!match) return {};
+    if (!match) {
+      return {};
+    }
     return extractMetadataRoot(parseYaml(match[1] ?? ''));
   } catch {
     return {};
@@ -483,9 +495,13 @@ function loadMarkdownFrontmatter(
 }
 
 function extractMetadataRoot(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) return {};
+  if (!isRecord(value)) {
+    return {};
+  }
   const dataroom = value['dataroom'];
-  if (isRecord(dataroom)) return dataroom;
+  if (isRecord(dataroom)) {
+    return dataroom;
+  }
   return value;
 }
 
@@ -515,7 +531,7 @@ function normalizeMetadata(value: Record<string, unknown>): FileProfileMetadata 
 function buildFileProfileFacets(
   relativePath: string,
   contentType: string,
-  metadata: FileProfileMetadata | undefined
+  metadata: FileProfileMetadata | undefined,
 ): ArtifactSearchFacets {
   return buildArtifactSearchFacets({
     path: relativePath,
@@ -550,7 +566,7 @@ function validateMaxBytes(maxBytes: number): void {
 async function assertFileWithinRoom(
   room: FileProfileRoom,
   fullPath: string,
-  artifactRef: ArtifactRef
+  artifactRef: ArtifactRef,
 ): Promise<void> {
   let rootRealPath: string;
   let fileRealPath: string;
@@ -568,7 +584,7 @@ async function assertFileWithinRoom(
 async function readBoundedFile(
   fullPath: string,
   maxBytes: number,
-  artifactRef: ArtifactRef
+  artifactRef: ArtifactRef,
 ): Promise<{ buffer: Buffer; size: number; truncated: boolean }> {
   try {
     const stats = await stat(fullPath);
@@ -604,7 +620,7 @@ async function readBoundedFile(
 
 async function findTextMatch(
   filePath: string,
-  needle: string
+  needle: string,
 ): Promise<{
   line: number;
   snippet: string;
@@ -635,7 +651,7 @@ async function findTextMatch(
 function buildSearchSnippet(
   lineText: string,
   matchIndex: number,
-  needleLength: number
+  needleLength: number,
 ): { snippet: string; snippetTruncated: boolean } {
   const trimmedLineText = lineText.trim();
   if (trimmedLineText.length <= MAX_SEARCH_SNIPPET_CHARS) {
@@ -649,7 +665,11 @@ function buildSearchSnippet(
   start = Math.max(0, end - contentBudget);
 
   let snippet = lineText.slice(start, end).trim();
-  if (start > 0) snippet = `${SNIPPET_BOUNDARY_MARKER}${snippet}`;
-  if (end < lineText.length) snippet = `${snippet}${SNIPPET_BOUNDARY_MARKER}`;
+  if (start > 0) {
+    snippet = `${SNIPPET_BOUNDARY_MARKER}${snippet}`;
+  }
+  if (end < lineText.length) {
+    snippet = `${snippet}${SNIPPET_BOUNDARY_MARKER}`;
+  }
   return { snippet, snippetTruncated: true };
 }

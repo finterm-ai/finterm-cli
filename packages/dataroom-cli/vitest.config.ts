@@ -5,7 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/__tests__/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/*.integration.test.ts', '**/*.e2e.test.ts'],
+    // The vendored suite ships an integration-named test that is filesystem-only
+    // and fast; there is no separate integration runner in this package, so it
+    // runs in the default suite.
+    exclude: ['**/node_modules/**', '**/*.e2e.test.ts'],
     testTimeout: 10000,
   },
 });

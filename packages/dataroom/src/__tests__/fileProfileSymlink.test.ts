@@ -38,12 +38,12 @@ async function createRoomFixture(): Promise<string> {
       '  frontmatter_format: 0.3.0',
       '',
     ].join('\n'),
-    'utf-8'
+    'utf-8',
   );
   await writeFile(
     join(roomPath, 'files', 'reports', 'overview.md'),
     ['# Overview', 'The launch room is file-backed.', ''].join('\n'),
-    'utf-8'
+    'utf-8',
   );
   return roomPath;
 }
@@ -65,7 +65,7 @@ describe('file-profile symlink containment', () => {
     // Reading the symlinked artifact must be refused and must not return the
     // secret contents.
     await expect(readFileProfileArtifact(room, 'file:reports/leak.txt')).rejects.toBeInstanceOf(
-      NotFoundError
+      NotFoundError,
     );
 
     let leaked: string | undefined;

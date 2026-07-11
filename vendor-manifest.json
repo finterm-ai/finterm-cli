@@ -1,0 +1,13 @@
+{
+  "$comment": "Vendored-package manifest written by scripts/sync-dataroom.mjs. Do not edit by hand; do not edit the vendored src/ trees (docs/VENDORING.md).",
+  "upstreamRef": "099e973bc3653b9dff50ab3ea2923117dda197eb",
+  "scope": "src",
+  "packages": {
+    "packages/dataroom": {
+      "treeHash": "96ca379861c12f8cb30a50e04b4cbdc6b2f76795f739e8cda2dda23b5081b351"
+    },
+    "packages/dataroom-cli": {
+      "treeHash": "fb1d568809844f8c77e306d8957600e5de2c7acae233d66167461e9dd3f3201f"
+    }
+  }
+}

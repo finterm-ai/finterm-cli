@@ -9,3 +9,8 @@ package-lock.json
 # Use lefthook pre-commit hook or run flowmark directly via uvx.
 # Never run prettier on .md files.
 *.md
+
+# Vendored from the private upstream (byte-identical; upstream formatting governs).
+# See docs/VENDORING.md — do not edit, do not format locally.
+packages/dataroom/src
+packages/dataroom-cli/src

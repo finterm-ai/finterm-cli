@@ -29,7 +29,7 @@ describe('artifact refs', () => {
   it('should format refs without storage directory prefixes', () => {
     expect(formatArtifactRef('file', 'files/notes.md')).toBe('file:notes.md');
     expect(formatArtifactRef('blob', 'blobs/web_example_com_abc.html')).toBe(
-      'blob:web_example_com_abc.html'
+      'blob:web_example_com_abc.html',
     );
   });
 
@@ -74,7 +74,7 @@ describe('artifact facets', () => {
       matchesFacetFilter(facets, {
         key: 'fileKindHierarchy',
         value: 'process.md',
-      })
+      }),
     ).toBe(true);
   });
 });
