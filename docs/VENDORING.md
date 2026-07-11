@@ -20,8 +20,10 @@ mistake impossible to merge rather than merely discouraged.
   vendored tree, written by the sync script.
   Do not edit it by hand.
 - `pnpm dataroom:check` recomputes the hashes and fails on any deviation.
-  It runs in `precommit`, in `pnpm ci` (and therefore in the release workflow), so a
-  local edit of vendored code cannot reach a release.
+  It runs at the front of the `precommit` script and of `pnpm ci` (which the release
+  workflow runs), so a local edit of vendored code cannot reach a release.
+  Note `precommit` is a package script to run before committing — this repo installs no
+  git hook that intercepts commits automatically.
 - Each vendored package carries a `VENDORED.md` marker pointing here.
 - The vendored trees are excluded from this repo’s prettier and eslint runs: the
   upstream owns formatting and lint for them, and the copies stay byte-identical.

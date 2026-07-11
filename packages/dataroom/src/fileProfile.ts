@@ -5,8 +5,8 @@
  * dataroom usage. It deliberately does not import database-backed stores.
  */
 
-import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
-import { open as openFile, readFile, realpath, stat } from 'node:fs/promises';
+import { createReadStream, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { open as openFile, readFile, stat } from 'node:fs/promises';
 import type { Dirent, Stats } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -249,19 +249,26 @@ export function buildFileProfileFile(
     return undefined;
   }
 
-  const fullPath = join(room.filesDir, normalizedRelativePath);
+  // Containment comes before ANY read: resolve every symlink (in the final
+  // component or any parent) and require the target to stay inside the room's
+  // files directory. Only the verified real path is statted, hashed, or read,
+  // so an escaping symlink leaks neither content nor a size/digest descriptor.
+  const realPath = resolveContainedRealPath(room, join(room.filesDir, normalizedRelativePath));
+  if (!realPath) {
+    return undefined;
+  }
   try {
-    const currentStats = stats ?? statSync(fullPath);
+    const currentStats = stats ?? statSync(realPath);
     if (!currentStats.isFile()) {
       return undefined;
     }
     const contentType = getContentTypeFromFilename(normalizedRelativePath);
     const timestamp = currentStats.mtime.toISOString();
-    const metadata = loadFileProfileMetadata(fullPath, normalizedRelativePath);
+    const metadata = loadFileProfileMetadata(room, realPath, normalizedRelativePath);
     const facets = buildFileProfileFacets(normalizedRelativePath, contentType, metadata);
     const entry: FileEntry = {
       path: `${FILES_DIR}/${normalizedRelativePath}`,
-      digest: getFileDigest(room, normalizedRelativePath, fullPath, currentStats),
+      digest: getFileDigest(room, normalizedRelativePath, realPath, currentStats),
       size: currentStats.size,
       contentType,
       facets,
@@ -272,7 +279,7 @@ export function buildFileProfileFile(
       roomId: room.metadata.name,
       ref: formatArtifactRef('file', normalizedRelativePath),
       path: normalizedRelativePath,
-      absolutePath: fullPath,
+      absolutePath: realPath,
       contentType,
       size: currentStats.size,
       updatedAt: timestamp,
@@ -280,6 +287,25 @@ export function buildFileProfileFile(
       facets,
       ...(metadata ? { metadata } : {}),
     };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve a candidate path under `files/` to its real path, returning
+ * `undefined` unless the fully resolved target stays inside the room's files
+ * directory. The files root is resolved too, so rooms living under a
+ * symlinked parent still work.
+ */
+function resolveContainedRealPath(room: FileProfileRoom, fullPath: string): string | undefined {
+  try {
+    const rootRealPath = realpathSync(room.filesDir);
+    const fileRealPath = realpathSync(fullPath);
+    if (fileRealPath !== rootRealPath && !fileRealPath.startsWith(rootRealPath + sep)) {
+      return undefined;
+    }
+    return fileRealPath;
   } catch {
     return undefined;
   }
@@ -343,7 +369,8 @@ export async function readFileProfileArtifact(
     throw new NotFoundError(parsed.ref, 'file');
   }
 
-  await assertFileWithinRoom(room, file.absolutePath, parsed.ref);
+  // file.absolutePath is the containment-verified real path from
+  // buildFileProfileFile; escaping symlinks never reach this point.
   const boundedRead = await readBoundedFile(file.absolutePath, maxBytes, parsed.ref);
   const includeText = options.includeText ?? true;
   const text =
@@ -449,23 +476,30 @@ function scanFileProfileDirectory(
 }
 
 function loadFileProfileMetadata(
+  room: FileProfileRoom,
   absolutePath: string,
   relativePath: string,
 ): FileProfileMetadata | undefined {
-  const sidecar = loadSidecarMetadata(absolutePath);
+  const sidecar = loadSidecarMetadata(room, absolutePath);
   const frontmatter = loadMarkdownFrontmatter(absolutePath, relativePath);
   const metadata = normalizeMetadata({ ...frontmatter, ...sidecar });
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
-function loadSidecarMetadata(absolutePath: string): Record<string, unknown> {
+function loadSidecarMetadata(room: FileProfileRoom, absolutePath: string): Record<string, unknown> {
   for (const path of [
     `${absolutePath}.meta.json`,
     `${absolutePath}.meta.yml`,
     `${absolutePath}.meta.yaml`,
   ]) {
+    // The sidecar itself must stay inside the room: a symlinked sidecar could
+    // otherwise surface fields parsed from an outside file.
+    const contained = resolveContainedRealPath(room, path);
+    if (!contained) {
+      continue;
+    }
     try {
-      const raw = readFileSync(path, 'utf-8');
+      const raw = readFileSync(contained, 'utf-8');
       const parsed = path.endsWith('.json') ? (JSON.parse(raw) as unknown) : parseYaml(raw);
       return extractMetadataRoot(parsed);
     } catch {
@@ -556,28 +590,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function validateMaxBytes(maxBytes: number): void {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
     throw new ValidationError('maxBytes must be a non-negative safe integer');
-  }
-}
-
-// Guard against symlink escapes: a file inside the room may be a symlink
-// pointing outside the files directory. Resolve the real paths of both the
-// files root and the target and require the target to stay inside the root.
-// The root is resolved too so rooms living under a symlinked parent still work.
-async function assertFileWithinRoom(
-  room: FileProfileRoom,
-  fullPath: string,
-  artifactRef: ArtifactRef,
-): Promise<void> {
-  let rootRealPath: string;
-  let fileRealPath: string;
-  try {
-    rootRealPath = await realpath(room.filesDir);
-    fileRealPath = await realpath(fullPath);
-  } catch {
-    throw new NotFoundError(artifactRef, 'file');
-  }
-  if (fileRealPath !== rootRealPath && !fileRealPath.startsWith(rootRealPath + sep)) {
-    throw new NotFoundError(artifactRef, 'file');
   }
 }
 

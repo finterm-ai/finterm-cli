@@ -20,9 +20,9 @@ read and search surface that `finterm dataroom` mounts.
 
 **Vendored code — do not edit:** the `src/` trees of `packages/dataroom` and
 `packages/dataroom-cli` are vendored byte-identical from their canonical upstream and
-verified by `pnpm dataroom:check` (wired into `precommit` and `pnpm ci`; local edits
-fail CI). Never modify those trees here — not for fixes, lint appeasement, or docs.
-Route the change upstream and re-sync instead.
+verified by `pnpm dataroom:check` (wired into the `precommit` script and `pnpm ci`;
+local edits fail CI). Never modify those trees here — not for fixes, lint appeasement,
+or docs. Route the change upstream and re-sync instead.
 See [docs/VENDORING.md](docs/VENDORING.md).
 
 ## Published Surface

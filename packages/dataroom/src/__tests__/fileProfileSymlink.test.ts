@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { NotFoundError } from '../errors.js';
 import {
+  buildFileProfileFile,
   listFileProfileFiles,
   openFileProfileRoom,
   readFileProfileArtifact,
@@ -80,6 +81,46 @@ describe('file-profile symlink containment', () => {
     // The symlink must not be enumerated as a regular room file either.
     const listed = listFileProfileFiles(room).map((file) => file.ref);
     expect(listed).not.toContain('file:reports/leak.txt');
+  });
+
+  it('buildFileProfileFile refuses an escaping symlink before reading it', async () => {
+    const roomPath = await createRoomFixture();
+
+    const secretPath = join(tempDir, 'secret.txt');
+    await writeFile(secretPath, SECRET_CONTENTS, 'utf-8');
+    await symlink(secretPath, join(roomPath, 'files', 'reports', 'leak.txt'));
+
+    const room = await openFileProfileRoom(roomPath);
+
+    // The exported descriptor builder must not leak the outside file's
+    // existence, size, or digest — containment comes before any read.
+    expect(buildFileProfileFile(room, 'reports/leak.txt')).toBeUndefined();
+  });
+
+  it('refuses artifacts reached through a symlinked parent directory', async () => {
+    const roomPath = await createRoomFixture();
+
+    const outsideDir = join(tempDir, 'outside');
+    await mkdir(outsideDir, { recursive: true });
+    await writeFile(join(outsideDir, 'secret.txt'), SECRET_CONTENTS, 'utf-8');
+    await symlink(outsideDir, join(roomPath, 'files', 'linkdir'));
+
+    const room = await openFileProfileRoom(roomPath);
+
+    expect(buildFileProfileFile(room, 'linkdir/secret.txt')).toBeUndefined();
+    await expect(readFileProfileArtifact(room, 'file:linkdir/secret.txt')).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it('still works when the room itself lives under a symlinked parent', async () => {
+    const roomPath = await createRoomFixture();
+    const linkedRoomPath = join(tempDir, 'room-link');
+    await symlink(roomPath, linkedRoomPath);
+
+    const room = await openFileProfileRoom(linkedRoomPath);
+    const artifact = await readFileProfileArtifact(room, 'file:reports/overview.md');
+    expect(artifact.text).toContain('The launch room is file-backed.');
   });
 
   it('still reads a legitimate regular file in the room', async () => {

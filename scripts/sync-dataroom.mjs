@@ -25,7 +25,15 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -35,6 +43,15 @@ const manifestPath = join(repoRoot, 'vendor-manifest.json');
 const VENDORED_PACKAGES = ['packages/dataroom', 'packages/dataroom-cli'];
 
 const UPSTREAM_DIR_ENV = 'DATAROOM_UPSTREAM_DIR';
+
+/**
+ * Versioned hash protocol, mirrored by the upstream's private parity check:
+ * sorted relative paths, path + NUL + content + NUL, sha256, regular files
+ * only. Symlinks and other non-regular entries are rejected outright — a
+ * same-content symlink is NOT byte-identical vendoring. Bump the version in
+ * both repos together if the algorithm ever changes.
+ */
+const HASH_ALGORITHM = 'dataroom-vendor-hash/1';
 
 function fail(message) {
   console.error(`sync-dataroom: ${message}`);
@@ -46,10 +63,13 @@ function walkRelative(dir) {
   const visit = (current) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const full = join(current, entry.name);
-      if (entry.isDirectory()) {
+      const rel = relative(dir, full).split('\\').join('/');
+      if (entry.isSymbolicLink() || (!entry.isDirectory() && !entry.isFile())) {
+        fail(`non-regular entry in vendored scope (regular files only): ${rel}`);
+      } else if (entry.isDirectory()) {
         visit(full);
       } else {
-        files.push(relative(dir, full).split('\\').join('/'));
+        files.push(rel);
       }
     }
   };
@@ -85,6 +105,12 @@ function check() {
     fail('vendor-manifest.json is missing; run a sync first (see docs/VENDORING.md)');
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  if (manifest.algorithm !== HASH_ALGORITHM) {
+    fail(
+      `manifest algorithm "${manifest.algorithm ?? 'missing'}" does not match ` +
+        `${HASH_ALGORITHM}; re-run a sync with the current script`
+    );
+  }
   const actual = computeHashes(repoRoot);
   const drifted = VENDORED_PACKAGES.filter(
     (pkg) => manifest.packages?.[pkg]?.treeHash !== actual[pkg]
@@ -129,10 +155,21 @@ function sync(fromArg) {
     encoding: 'utf8',
   }).trim();
 
+  // Transactional replacement: stage and validate every tree first, then
+  // swap, so a failed copy cannot leave a partially replaced checkout.
+  const staged = new Map();
+  for (const pkg of VENDORED_PACKAGES) {
+    const source = join(upstream, pkg, 'src');
+    const staging = join(repoRoot, pkg, `.src-staging-${process.pid}`);
+    rmSync(staging, { recursive: true, force: true });
+    cpSync(source, staging, { recursive: true });
+    walkRelative(staging); // validates regular-files-only before the swap
+    staged.set(pkg, staging);
+  }
   for (const pkg of VENDORED_PACKAGES) {
     const target = join(repoRoot, pkg, 'src');
     rmSync(target, { recursive: true, force: true });
-    cpSync(join(upstream, pkg, 'src'), target, { recursive: true });
+    renameSync(staged.get(pkg), target);
   }
 
   const hashes = computeHashes(repoRoot);
@@ -140,6 +177,7 @@ function sync(fromArg) {
     $comment:
       'Vendored-package manifest written by scripts/sync-dataroom.mjs. ' +
       'Do not edit by hand; do not edit the vendored src/ trees (docs/VENDORING.md).',
+    algorithm: HASH_ALGORITHM,
     upstreamRef,
     scope: 'src',
     packages: Object.fromEntries(VENDORED_PACKAGES.map((pkg) => [pkg, { treeHash: hashes[pkg] }])),
