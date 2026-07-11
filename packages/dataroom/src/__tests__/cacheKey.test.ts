@@ -5,7 +5,7 @@ import { canonicalizeForHash, actionHash } from '../utils/hash.js';
 // Canonicalization test vectors.
 // These lock the canonical-form contract shared by callKey and actionHash.
 describe('canonicalizeForHash vectors', () => {
-  const vectors: Array<[string, unknown, string]> = [
+  const vectors: [string, unknown, string][] = [
     ['sorts object keys', { b: 2, a: 1 }, '{"a":1,"b":2}'],
     ['drops undefined, keeps null', { x: undefined, y: null, a: 1 }, '{"a":1,"y":null}'],
     [

@@ -87,6 +87,13 @@ The order is fixed:
 
 Run from the repo root unless noted; none of these change anything.
 
+0. **Vendored dataroom trees are current:** run
+   `pnpm dataroom:sync --from <path-to-upstream-checkout>` (maintainers/agents with
+   upstream access) and commit the refreshed trees + `vendor-manifest.json` if anything
+   changed — every release ships the current upstream dataroom code.
+   `pnpm run ci` then re-verifies integrity via `dataroom:check`. See
+   [VENDORING.md](VENDORING.md).
+
 1. **Name is free** (only relevant for the very first publish):
    `curl -s -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@finterm-ai%2Fcli`
    returns `404`.

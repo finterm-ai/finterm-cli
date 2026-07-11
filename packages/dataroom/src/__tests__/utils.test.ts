@@ -154,19 +154,19 @@ describe('URL normalization', () => {
       expect(
         normalizeUrl('https://example.com/page#section', {
           removeFragment: false,
-        })
+        }),
       ).toBe('https://example.com/page#section');
     });
 
     it('should sort query parameters', () => {
       expect(normalizeUrl('https://example.com/?z=1&a=2&m=3')).toBe(
-        'https://example.com/?a=2&m=3&z=1'
+        'https://example.com/?a=2&m=3&z=1',
       );
     });
 
     it('should remove UTM tracking parameters', () => {
       expect(normalizeUrl('https://example.com/?q=test&utm_source=google')).toBe(
-        'https://example.com/?q=test'
+        'https://example.com/?q=test',
       );
     });
 
@@ -280,7 +280,7 @@ describe('blob filename generation', () => {
     it('strips the codec suffix when the blob is encoded', () => {
       expect(logicalBlobFilename({ path: 'blobs/foo.html.gz', encoding: 'gzip' })).toBe('foo.html');
       expect(logicalBlobFilename({ path: 'blobs/foo.json.zst', encoding: 'zstd' })).toBe(
-        'foo.json'
+        'foo.json',
       );
     });
 
@@ -382,7 +382,7 @@ describe('YAML utilities', () => {
     it('should apply key ordering', () => {
       const result = stringifyYaml(
         { z: 1, a: 2, format: 'test' },
-        { keyOrder: ['format', 'a', 'z'] }
+        { keyOrder: ['format', 'a', 'z'] },
       );
       const lines = result.split('\n');
       const formatLine = lines.findIndex((l) => l.startsWith('format:'));
@@ -457,7 +457,7 @@ describe('YAML utilities', () => {
           codec: 'zstd',
           minSize: 4096,
           skipContentTypes: ['image/*'],
-        })
+        }),
       ).toEqual({
         codec: 'zstd',
         min_size: 4096,
@@ -484,7 +484,7 @@ describe('YAML utilities', () => {
           codec: 'gzip',
           minSize: 0,
           skipContentTypes: ['video/*'],
-        })
+        }),
       ).toEqual({ codec: 'gzip', minSize: 0, skipContentTypes: ['video/*'] });
     });
 
@@ -506,7 +506,7 @@ describe('YAML utilities', () => {
       };
       const yaml = stringifyDataroomYaml(record);
       const parsed = parseYaml<Record<string, unknown>>(yaml);
-      expect(blobCompressionFromYaml(parsed['blob_compression'])).toEqual({
+      expect(blobCompressionFromYaml(parsed.blob_compression)).toEqual({
         codec: 'zstd',
         minSize: 4096,
       });

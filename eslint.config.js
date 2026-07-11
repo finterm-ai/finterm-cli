@@ -43,6 +43,10 @@ export default [
       '**/coverage/**',
       'eslint.config.*',
       '**/vitest.config*.ts', // Config files don't need linting
+      // Vendored byte-identical from the private upstream, which owns lint
+      // and formatting for these trees (docs/VENDORING.md). Do not edit here.
+      'packages/dataroom/src/**',
+      'packages/dataroom-cli/src/**',
       'packages/finterm-cli/src/cli/commands/cache.ts',
       'packages/finterm-cli/src/cli/commands/dev.ts',
       'packages/finterm-cli/src/cli/commands/form.ts',

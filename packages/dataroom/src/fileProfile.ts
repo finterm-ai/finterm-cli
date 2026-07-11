@@ -5,8 +5,8 @@
  * dataroom usage. It deliberately does not import database-backed stores.
  */
 
-import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
-import { open as openFile, readFile, realpath, stat } from 'node:fs/promises';
+import { createReadStream, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { open as openFile, readFile, stat } from 'node:fs/promises';
 import type { Dirent, Stats } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -124,7 +124,7 @@ export async function openFileProfileRoom(inputPath: string): Promise<FileProfil
   if (missing.length > 0) {
     throw new ValidationError(
       `Invalid ${ROOM_METADATA_FILE}`,
-      missing.map((key) => `missing ${key}`)
+      missing.map((key) => `missing ${key}`),
     );
   }
 
@@ -202,7 +202,7 @@ export function listFileProfileFiles(room: FileProfileRoom): FileProfileFile[] {
  */
 export function queryFileProfileFiles(
   room: FileProfileRoom,
-  options: QueryFilesOptions = {}
+  options: QueryFilesOptions = {},
 ): FileQueryResult[] {
   const pathPrefix = options.pathPrefix?.replace(new RegExp(`^${FILES_DIR}/`), '');
   const limit = options.limit ?? Number.POSITIVE_INFINITY;
@@ -240,7 +240,7 @@ export function queryFileProfileFiles(
 export function buildFileProfileFile(
   room: FileProfileRoom,
   relativePath: string,
-  stats?: Stats
+  stats?: Stats,
 ): FileProfileFile | undefined {
   let normalizedRelativePath: string;
   try {
@@ -249,19 +249,26 @@ export function buildFileProfileFile(
     return undefined;
   }
 
-  const fullPath = join(room.filesDir, normalizedRelativePath);
+  // Containment comes before ANY read: resolve every symlink (in the final
+  // component or any parent) and require the target to stay inside the room's
+  // files directory. Only the verified real path is statted, hashed, or read,
+  // so an escaping symlink leaks neither content nor a size/digest descriptor.
+  const realPath = resolveContainedRealPath(room, join(room.filesDir, normalizedRelativePath));
+  if (!realPath) {
+    return undefined;
+  }
   try {
-    const currentStats = stats ?? statSync(fullPath);
+    const currentStats = stats ?? statSync(realPath);
     if (!currentStats.isFile()) {
       return undefined;
     }
     const contentType = getContentTypeFromFilename(normalizedRelativePath);
     const timestamp = currentStats.mtime.toISOString();
-    const metadata = loadFileProfileMetadata(fullPath, normalizedRelativePath);
+    const metadata = loadFileProfileMetadata(room, realPath, normalizedRelativePath);
     const facets = buildFileProfileFacets(normalizedRelativePath, contentType, metadata);
     const entry: FileEntry = {
       path: `${FILES_DIR}/${normalizedRelativePath}`,
-      digest: getFileDigest(room, normalizedRelativePath, fullPath, currentStats),
+      digest: getFileDigest(room, normalizedRelativePath, realPath, currentStats),
       size: currentStats.size,
       contentType,
       facets,
@@ -272,7 +279,7 @@ export function buildFileProfileFile(
       roomId: room.metadata.name,
       ref: formatArtifactRef('file', normalizedRelativePath),
       path: normalizedRelativePath,
-      absolutePath: fullPath,
+      absolutePath: realPath,
       contentType,
       size: currentStats.size,
       updatedAt: timestamp,
@@ -280,6 +287,25 @@ export function buildFileProfileFile(
       facets,
       ...(metadata ? { metadata } : {}),
     };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve a candidate path under `files/` to its real path, returning
+ * `undefined` unless the fully resolved target stays inside the room's files
+ * directory. The files root is resolved too, so rooms living under a
+ * symlinked parent still work.
+ */
+function resolveContainedRealPath(room: FileProfileRoom, fullPath: string): string | undefined {
+  try {
+    const rootRealPath = realpathSync(room.filesDir);
+    const fileRealPath = realpathSync(fullPath);
+    if (fileRealPath !== rootRealPath && !fileRealPath.startsWith(rootRealPath + sep)) {
+      return undefined;
+    }
+    return fileRealPath;
   } catch {
     return undefined;
   }
@@ -294,11 +320,11 @@ function getFileDigest(
   room: FileProfileRoom,
   relativePath: string,
   fullPath: string,
-  stats: Stats
+  stats: Stats,
 ): string {
   const cache = getFileDigestCache(room);
   const cached = cache.get(relativePath);
-  if (cached && cached.size === stats.size && cached.mtimeMs === stats.mtimeMs) {
+  if (cached?.size === stats.size && cached.mtimeMs === stats.mtimeMs) {
     return cached.digest;
   }
 
@@ -329,7 +355,7 @@ function getFileDigestCache(room: FileProfileRoom): Map<string, FileDigestCacheE
 export async function readFileProfileArtifact(
   room: FileProfileRoom,
   ref: ArtifactRef | string,
-  options: ArtifactReadOptions = {}
+  options: ArtifactReadOptions = {},
 ): Promise<ArtifactReadResult> {
   const parsed = parseArtifactRef(ref);
   if (parsed.kind !== 'file') {
@@ -343,7 +369,8 @@ export async function readFileProfileArtifact(
     throw new NotFoundError(parsed.ref, 'file');
   }
 
-  await assertFileWithinRoom(room, file.absolutePath, parsed.ref);
+  // file.absolutePath is the containment-verified real path from
+  // buildFileProfileFile; escaping symlinks never reach this point.
   const boundedRead = await readBoundedFile(file.absolutePath, maxBytes, parsed.ref);
   const includeText = options.includeText ?? true;
   const text =
@@ -371,7 +398,7 @@ export async function readFileProfileArtifact(
 export async function searchFileProfileFiles(
   room: FileProfileRoom,
   query: string,
-  options: FileProfileSearchOptions = {}
+  options: FileProfileSearchOptions = {},
 ): Promise<FileProfileSearchMatch[]> {
   const limit = options.limit ?? 20;
   const pathPrefix = options.pathPrefix?.replace(new RegExp(`^${FILES_DIR}/`), '');
@@ -379,13 +406,23 @@ export async function searchFileProfileFiles(
   const matches: FileProfileSearchMatch[] = [];
 
   for (const file of listFileProfileFiles(room)) {
-    if (matches.length >= limit) break;
-    if (pathPrefix && !file.path.startsWith(pathPrefix)) continue;
-    if (!matchesFacetFilters(file.facets, options.facets)) continue;
-    if (!isTextContentType(file.contentType)) continue;
+    if (matches.length >= limit) {
+      break;
+    }
+    if (pathPrefix && !file.path.startsWith(pathPrefix)) {
+      continue;
+    }
+    if (!matchesFacetFilters(file.facets, options.facets)) {
+      continue;
+    }
+    if (!isTextContentType(file.contentType)) {
+      continue;
+    }
 
     const match = await findTextMatch(file.absolutePath, needle);
-    if (!match) continue;
+    if (!match) {
+      continue;
+    }
     matches.push({
       roomId: file.roomId,
       ref: file.ref,
@@ -404,7 +441,7 @@ export async function searchFileProfileFiles(
 function scanFileProfileDirectory(
   room: FileProfileRoom,
   directory: string,
-  results: FileProfileFile[]
+  results: FileProfileFile[],
 ): void {
   let entries: Dirent[];
   try {
@@ -439,23 +476,30 @@ function scanFileProfileDirectory(
 }
 
 function loadFileProfileMetadata(
+  room: FileProfileRoom,
   absolutePath: string,
-  relativePath: string
+  relativePath: string,
 ): FileProfileMetadata | undefined {
-  const sidecar = loadSidecarMetadata(absolutePath);
+  const sidecar = loadSidecarMetadata(room, absolutePath);
   const frontmatter = loadMarkdownFrontmatter(absolutePath, relativePath);
   const metadata = normalizeMetadata({ ...frontmatter, ...sidecar });
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
-function loadSidecarMetadata(absolutePath: string): Record<string, unknown> {
+function loadSidecarMetadata(room: FileProfileRoom, absolutePath: string): Record<string, unknown> {
   for (const path of [
     `${absolutePath}.meta.json`,
     `${absolutePath}.meta.yml`,
     `${absolutePath}.meta.yaml`,
   ]) {
+    // The sidecar itself must stay inside the room: a symlinked sidecar could
+    // otherwise surface fields parsed from an outside file.
+    const contained = resolveContainedRealPath(room, path);
+    if (!contained) {
+      continue;
+    }
     try {
-      const raw = readFileSync(path, 'utf-8');
+      const raw = readFileSync(contained, 'utf-8');
       const parsed = path.endsWith('.json') ? (JSON.parse(raw) as unknown) : parseYaml(raw);
       return extractMetadataRoot(parsed);
     } catch {
@@ -467,7 +511,7 @@ function loadSidecarMetadata(absolutePath: string): Record<string, unknown> {
 
 function loadMarkdownFrontmatter(
   absolutePath: string,
-  relativePath: string
+  relativePath: string,
 ): Record<string, unknown> {
   if (!['.md', '.markdown'].includes(extname(relativePath).toLowerCase())) {
     return {};
@@ -475,7 +519,9 @@ function loadMarkdownFrontmatter(
   try {
     const raw = readFileSync(absolutePath, 'utf-8');
     const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw);
-    if (!match) return {};
+    if (!match) {
+      return {};
+    }
     return extractMetadataRoot(parseYaml(match[1] ?? ''));
   } catch {
     return {};
@@ -483,9 +529,13 @@ function loadMarkdownFrontmatter(
 }
 
 function extractMetadataRoot(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) return {};
+  if (!isRecord(value)) {
+    return {};
+  }
   const dataroom = value['dataroom'];
-  if (isRecord(dataroom)) return dataroom;
+  if (isRecord(dataroom)) {
+    return dataroom;
+  }
   return value;
 }
 
@@ -515,7 +565,7 @@ function normalizeMetadata(value: Record<string, unknown>): FileProfileMetadata 
 function buildFileProfileFacets(
   relativePath: string,
   contentType: string,
-  metadata: FileProfileMetadata | undefined
+  metadata: FileProfileMetadata | undefined,
 ): ArtifactSearchFacets {
   return buildArtifactSearchFacets({
     path: relativePath,
@@ -543,32 +593,10 @@ function validateMaxBytes(maxBytes: number): void {
   }
 }
 
-// Guard against symlink escapes: a file inside the room may be a symlink
-// pointing outside the files directory. Resolve the real paths of both the
-// files root and the target and require the target to stay inside the root.
-// The root is resolved too so rooms living under a symlinked parent still work.
-async function assertFileWithinRoom(
-  room: FileProfileRoom,
-  fullPath: string,
-  artifactRef: ArtifactRef
-): Promise<void> {
-  let rootRealPath: string;
-  let fileRealPath: string;
-  try {
-    rootRealPath = await realpath(room.filesDir);
-    fileRealPath = await realpath(fullPath);
-  } catch {
-    throw new NotFoundError(artifactRef, 'file');
-  }
-  if (fileRealPath !== rootRealPath && !fileRealPath.startsWith(rootRealPath + sep)) {
-    throw new NotFoundError(artifactRef, 'file');
-  }
-}
-
 async function readBoundedFile(
   fullPath: string,
   maxBytes: number,
-  artifactRef: ArtifactRef
+  artifactRef: ArtifactRef,
 ): Promise<{ buffer: Buffer; size: number; truncated: boolean }> {
   try {
     const stats = await stat(fullPath);
@@ -604,7 +632,7 @@ async function readBoundedFile(
 
 async function findTextMatch(
   filePath: string,
-  needle: string
+  needle: string,
 ): Promise<{
   line: number;
   snippet: string;
@@ -635,7 +663,7 @@ async function findTextMatch(
 function buildSearchSnippet(
   lineText: string,
   matchIndex: number,
-  needleLength: number
+  needleLength: number,
 ): { snippet: string; snippetTruncated: boolean } {
   const trimmedLineText = lineText.trim();
   if (trimmedLineText.length <= MAX_SEARCH_SNIPPET_CHARS) {
@@ -649,7 +677,11 @@ function buildSearchSnippet(
   start = Math.max(0, end - contentBudget);
 
   let snippet = lineText.slice(start, end).trim();
-  if (start > 0) snippet = `${SNIPPET_BOUNDARY_MARKER}${snippet}`;
-  if (end < lineText.length) snippet = `${snippet}${SNIPPET_BOUNDARY_MARKER}`;
+  if (start > 0) {
+    snippet = `${SNIPPET_BOUNDARY_MARKER}${snippet}`;
+  }
+  if (end < lineText.length) {
+    snippet = `${snippet}${SNIPPET_BOUNDARY_MARKER}`;
+  }
   return { snippet, snippetTruncated: true };
 }

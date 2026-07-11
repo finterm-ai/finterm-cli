@@ -53,7 +53,7 @@ const DEFAULT_SEARCH_LIMIT = 20;
  */
 export function buildDataroomCommand(): Command {
   const command = new Command('dataroom').description(
-    'Read and search a downloaded local Dataroom'
+    'Read and search a downloaded local Dataroom',
   );
 
   command.option('--json', 'Output as JSON');
@@ -66,7 +66,7 @@ export function buildDataroomCommand(): Command {
       '--facet <key=value>',
       'Only include files matching a file metadata facet',
       collectFacet,
-      []
+      [],
     )
     .option('--limit <n>', 'Maximum number of files to return')
     .option('--json', 'Output as JSON')
@@ -80,7 +80,7 @@ export function buildDataroomCommand(): Command {
       '--facet <key=value>',
       'Only search files matching a file metadata facet',
       collectFacet,
-      []
+      [],
     )
     .option('--limit <n>', 'Maximum number of matches to return')
     .option('--json', 'Output as JSON')
@@ -101,7 +101,7 @@ export function buildDataroomCommand(): Command {
       '--facet <key=value>',
       'Only include files matching a file metadata facet',
       collectFacet,
-      []
+      [],
     )
     .option('--limit <n>', 'Maximum number of files to return')
     .option('--json', 'Output as JSON')
@@ -120,7 +120,7 @@ export function buildDataroomCommand(): Command {
 async function filesAction(
   roomPath: string,
   options: FilesOptions,
-  command: Command
+  command: Command,
 ): Promise<void> {
   const room = await openFileProfileRoom(roomPath);
   const limit = parsePositiveInteger('--limit', options.limit, Number.POSITIVE_INFINITY);
@@ -148,7 +148,7 @@ async function readAction(
   roomPath: string,
   ref: string,
   options: ReadOptions,
-  command: Command
+  command: Command,
 ): Promise<void> {
   const room = await openFileProfileRoom(roomPath);
   const maxBytes = parseNonNegativeInteger('--max-bytes', options.maxBytes, DEFAULT_READ_MAX_BYTES);
@@ -185,7 +185,7 @@ async function searchAction(
   roomPath: string,
   query: string,
   options: SearchOptions,
-  command: Command
+  command: Command,
 ): Promise<void> {
   const room = await openFileProfileRoom(roomPath);
   const limit = parsePositiveInteger('--limit', options.limit, DEFAULT_SEARCH_LIMIT);
@@ -263,7 +263,7 @@ function outputJson(data: unknown): void {
 function parsePositiveInteger(
   optionName: string,
   value: string | undefined,
-  fallback: number
+  fallback: number,
 ): number {
   if (value === undefined) {
     return fallback;
@@ -279,7 +279,7 @@ function parsePositiveInteger(
 function parseNonNegativeInteger(
   optionName: string,
   value: string | undefined,
-  fallback: number
+  fallback: number,
 ): number {
   if (value === undefined) {
     return fallback;

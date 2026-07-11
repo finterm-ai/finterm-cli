@@ -99,7 +99,7 @@ export function buildArtifactSearchFacets(input: {
  */
 export function matchesFacetFilters(
   facets: ArtifactSearchFacets,
-  filters: FacetFilter[] = []
+  filters: FacetFilter[] = [],
 ): boolean {
   return filters.every((filter) => matchesFacetFilter(facets, filter));
 }
@@ -135,7 +135,7 @@ export function matchesFacetFilter(facets: ArtifactSearchFacets, filter: FacetFi
  */
 export function getFacetValue(
   facets: ArtifactSearchFacets,
-  key: ArtifactSearchFacetKey
+  key: ArtifactSearchFacetKey,
 ): FacetValue | FacetValue[] | undefined {
   if (key.startsWith('custom.')) {
     return facets.custom?.[key.slice('custom.'.length)];
