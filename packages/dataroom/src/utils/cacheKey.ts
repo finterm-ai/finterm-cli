@@ -57,8 +57,12 @@ export function fileKey(path: string): string {
  */
 export function parseKey(key: string): { scheme: KeyScheme; rest: string } | undefined {
   const idx = key.indexOf(':');
-  if (idx === -1) return undefined;
+  if (idx === -1) {
+    return undefined;
+  }
   const scheme = key.slice(0, idx);
-  if (!KEY_SCHEMES.includes(scheme as KeyScheme)) return undefined;
+  if (!KEY_SCHEMES.includes(scheme as KeyScheme)) {
+    return undefined;
+  }
   return { scheme: scheme as KeyScheme, rest: key.slice(idx + 1) };
 }

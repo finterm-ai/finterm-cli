@@ -28,7 +28,7 @@ export class DataRoomError extends Error {
 export class NotFoundError extends DataRoomError {
   constructor(
     public readonly path: string,
-    public readonly resourceType: 'room' | 'library' | 'file' | 'blob' = 'room'
+    public readonly resourceType: 'room' | 'library' | 'file' | 'blob' = 'room',
   ) {
     super(`${resourceType} not found at: ${path}`);
     this.name = 'NotFoundError';
@@ -74,7 +74,7 @@ export class SealedRoomError extends DataRoomError {
 export class CacheMissError extends DataRoomError {
   constructor(
     public readonly url: string,
-    public readonly normalizedUrl: string
+    public readonly normalizedUrl: string,
   ) {
     super(`URL not in cache: ${url}`);
     this.name = 'CacheMissError';
@@ -97,7 +97,7 @@ export class EntryNotFoundError extends DataRoomError {
 export class FormatError extends DataRoomError {
   constructor(
     public readonly expected: string,
-    public readonly actual: string
+    public readonly actual: string,
   ) {
     super(`Incompatible format version: expected ${expected}, got ${actual}`);
     this.name = 'FormatError';
@@ -110,7 +110,7 @@ export class FormatError extends DataRoomError {
 export class ValidationError extends DataRoomError {
   constructor(
     message: string,
-    public readonly issues: string[] = []
+    public readonly issues: string[] = [],
   ) {
     super(issues.length > 0 ? `${message}: ${issues.join(', ')}` : message);
     this.name = 'ValidationError';
@@ -124,7 +124,7 @@ export class FetchError extends DataRoomError {
   constructor(
     public readonly url: string,
     public readonly statusCode?: number,
-    public override readonly cause: Error | undefined = undefined
+    public override readonly cause: Error | undefined = undefined,
   ) {
     const statusPart = statusCode ? ` (status: ${statusCode})` : '';
     const causePart = cause ? `: ${cause.message}` : '';
@@ -149,7 +149,7 @@ export class ConfigurationError extends DataRoomError {
 export class DecodeError extends DataRoomError {
   constructor(
     message: string,
-    public override readonly cause: Error | undefined = undefined
+    public override readonly cause: Error | undefined = undefined,
   ) {
     const causePart = cause ? `: ${cause.message}` : '';
     super(`${message}${causePart}`);
@@ -162,7 +162,7 @@ export class IndexError extends DataRoomError {
   constructor(
     message: string,
     public readonly indexPath: string,
-    public override readonly cause: Error | undefined = undefined
+    public override readonly cause: Error | undefined = undefined,
   ) {
     const causePart = cause ? `: ${cause.message}` : '';
     super(`Index error in ${indexPath}: ${message}${causePart}`);

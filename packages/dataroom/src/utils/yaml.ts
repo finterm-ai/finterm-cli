@@ -202,11 +202,15 @@ export function readYaml<T = unknown>(content: string): T {
  * Only defined fields are emitted.
  */
 export function blobCompressionToYaml(
-  config: Partial<BlobCompressionConfig>
+  config: Partial<BlobCompressionConfig>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (config.codec !== undefined) out['codec'] = config.codec;
-  if (config.minSize !== undefined) out['min_size'] = config.minSize;
+  if (config.codec !== undefined) {
+    out['codec'] = config.codec;
+  }
+  if (config.minSize !== undefined) {
+    out['min_size'] = config.minSize;
+  }
   if (config.skipContentTypes !== undefined) {
     out['skip_content_types'] = [...config.skipContentTypes];
   }
@@ -218,18 +222,26 @@ export function blobCompressionToYaml(
  * camelCase config. Returns undefined when the input carries no recognized keys.
  */
 export function blobCompressionFromYaml(raw: unknown): Partial<BlobCompressionConfig> | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
   const r = raw as Record<string, unknown>;
   const out: Partial<BlobCompressionConfig> = {};
 
   const codec = r['codec'];
-  if (typeof codec === 'string') out.codec = codec as CodecChoice;
+  if (typeof codec === 'string') {
+    out.codec = codec as CodecChoice;
+  }
 
   const minSize = r['min_size'] ?? r['minSize'];
-  if (typeof minSize === 'number') out.minSize = minSize;
+  if (typeof minSize === 'number') {
+    out.minSize = minSize;
+  }
 
   const skip = r['skip_content_types'] ?? r['skipContentTypes'];
-  if (Array.isArray(skip)) out.skipContentTypes = skip.map(String);
+  if (Array.isArray(skip)) {
+    out.skipContentTypes = skip.map(String);
+  }
 
   return Object.keys(out).length > 0 ? out : undefined;
 }
@@ -243,7 +255,7 @@ export function blobCompressionFromYaml(raw: unknown): Partial<BlobCompressionCo
  */
 export function validateRequiredKeys(
   obj: Record<string, unknown>,
-  requiredKeys: readonly string[]
+  requiredKeys: readonly string[],
 ): string[] {
   const missing: string[] = [];
   for (const key of requiredKeys) {

@@ -157,7 +157,7 @@ export function generateBlobFilename(options: BlobFilenameOptions): string {
 export function generateUrlBlobFilename(
   url: string,
   content: string | Buffer,
-  extension: string
+  extension: string,
 ): string {
   const domain = extractDomain(url);
 
@@ -190,7 +190,7 @@ export function generateApiBlobFilename(
   endpoint: string,
   identifier: string,
   content: string | Buffer,
-  extension: string = 'json'
+  extension = 'json',
 ): string {
   return generateBlobFilename({
     source: provider,
