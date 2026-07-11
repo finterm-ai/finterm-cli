@@ -10,7 +10,7 @@ describe('planStateLines (C2/C4 plan-aware messaging)', () => {
       trialEndsAt: null,
       upgradeUrl: 'https://app.finterm.ai/pricing',
     });
-    expect(lines[0]).toBe('Plan: free — API access requires Pro.');
+    expect(lines[0]).toBe('Plan: free; API access requires Pro.');
     expect(lines[1]).toBe('Upgrade: https://app.finterm.ai/pricing');
     expect(lines.join('\n')).not.toMatch(/\$\d|\/month|trial|card/i);
   });

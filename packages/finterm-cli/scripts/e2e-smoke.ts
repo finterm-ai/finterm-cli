@@ -142,7 +142,8 @@ async function handleRequest(
   response: ServerResponse,
   requests: RecordedRequest[]
 ): Promise<void> {
-  if (request.method !== 'POST' || request.url !== '/api/v1/fundamentals/financials') {
+  const knownRoutes = ['/api/v1/fundamentals/financials', '/api/v1/feedback'];
+  if (request.method !== 'POST' || !knownRoutes.includes(request.url ?? '')) {
     sendJson(response, HTTP_NOT_FOUND, {
       error: { code: 'NOT_FOUND', message: `Unexpected route: ${request.method} ${request.url}` },
     });
@@ -157,6 +158,25 @@ async function handleRequest(
   }
 
   const body = await readRequestJson(request);
+
+  if (request.url === '/api/v1/feedback') {
+    requests.push({
+      method: request.method,
+      url: request.url,
+      authorization: request.headers.authorization,
+      body,
+    });
+    sendJson(response, HTTP_OK, {
+      finterm: {
+        schema: 'finterm.result:FeedbackAck/v1',
+        tool: 'feedback',
+        args: {},
+        request_id: 'smoke_feedback_request',
+      },
+      data: { feedback_id: 'fb_smoke_1', status: 'received' },
+    });
+    return;
+  }
   requests.push({
     method: request.method,
     url: request.url,
@@ -303,7 +323,40 @@ async function main(): Promise<void> {
     const request = smokeServer.requests[0];
     expectRequest(request);
 
-    console.log('E2E smoke passed: help output and local-server point-tool call succeeded');
+    // Feedback disclosure is unsuppressible: a --quiet submission must still
+    // print the exact payload (stderr) before sending, in text and JSON modes.
+    const quietText = await runFinterm(
+      ['--quiet', 'feedback', 'bug', 'smoke summary', '--body', 'smoke body'],
+      { env: baseEnv }
+    );
+    assertIncludes(quietText.stderr, 'Sending feedback payload:', 'quiet feedback stderr');
+    assertIncludes(quietText.stderr, '"smoke summary"', 'quiet feedback stderr payload');
+    assertIncludes(quietText.stderr, '"submission_id"', 'quiet feedback stderr payload');
+
+    const quietJson = await runFinterm(
+      ['--quiet', '--json', 'feedback', 'question', 'smoke json summary'],
+      { env: baseEnv }
+    );
+    assertIncludes(quietJson.stderr, '"feedbackPayload"', 'quiet json feedback stderr');
+    assertIncludes(quietJson.stderr, 'smoke json summary', 'quiet json feedback stderr payload');
+    const ack = JSON.parse(quietJson.stdout) as { data?: { feedback_id?: string } };
+    if (ack.data?.feedback_id !== 'fb_smoke_1') {
+      throw new Error(`Unexpected feedback ack: ${quietJson.stdout}`);
+    }
+
+    const feedbackRequests = smokeServer.requests.filter((r) => r.url === '/api/v1/feedback');
+    if (feedbackRequests.length !== 2) {
+      throw new Error(`Expected 2 feedback submissions, saw ${feedbackRequests.length}`);
+    }
+    for (const submission of feedbackRequests) {
+      if (typeof submission.body.submission_id !== 'string') {
+        throw new Error('Feedback submission missing its idempotency submission_id.');
+      }
+    }
+
+    console.log(
+      'E2E smoke passed: help, point-tool call, and quiet-mode feedback disclosure succeeded'
+    );
   } finally {
     await closeServer(smokeServer.server);
     rmSync(tempRoot, { recursive: true, force: true });

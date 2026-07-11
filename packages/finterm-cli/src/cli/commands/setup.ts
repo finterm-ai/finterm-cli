@@ -144,7 +144,7 @@ class SetupHandler extends BaseCommand {
       );
     } else {
       console.log('');
-      console.log(colors.dim('  No Claude Code detected — its mirror + hooks were skipped.'));
+      console.log(colors.dim('  No Claude Code detected; its mirror and hooks were skipped.'));
     }
     console.log('');
     console.log(colors.dim('Check status anytime: finterm setup --check'));

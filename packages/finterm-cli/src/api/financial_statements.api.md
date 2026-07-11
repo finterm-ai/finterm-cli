@@ -61,8 +61,8 @@ definition:
 ---
 # Financial Statements
 
-Get a company’s reported financial statements — balance sheet, income statement, or cash
-flow — one statement type per call, as a series of reporting periods.
+Get a company’s reported financial statements (balance sheet, income statement, or cash
+flow), one statement type per call, as a series of reporting periods.
 Use it to analyze financial health, profitability, and cash generation.
 Each period carries its fiscal year and quarter, the period end and filing dates, and
 the statement’s line items.

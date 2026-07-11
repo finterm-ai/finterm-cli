@@ -470,7 +470,7 @@
   },
   {
     "id": "ticker_data",
-    "summary": "The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context — in one call.",
+    "summary": "The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context, in one call.",
     "args": [
       {
         "name": "ticker",

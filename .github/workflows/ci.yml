@@ -27,6 +27,22 @@ jobs:
         # Report known-high vulnerabilities in production deps; non-blocking.
         run: pnpm audit --prod --audit-level=high || true
 
+  metadata-scan:
+    # PR titles/bodies and commit messages become public history on merge, so
+    # they are held to the same boundary rules as the tree (CONTRIBUTING.md).
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Scan PR metadata and commit messages
+        env:
+          COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/check-pr-metadata.mjs
+
   secret-scan:
     runs-on: ubuntu-latest
     steps:

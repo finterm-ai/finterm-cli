@@ -86,8 +86,13 @@ export function createColoredHelpConfig(colorOption: ColorOption = 'auto') {
  */
 export function createHelpEpilog(colorOption: ColorOption = 'auto'): string {
   const colors = createColors(colorOption);
-  // Bright (not dim): the quick-start hint is the most important line in help.
-  return colors.hint('Quick start: `finterm auth login` -> `finterm setup`');
+  // Bright (not dim): the quick-start hint is the most important line in help,
+  // and the feedback pointer is the in-product support channel.
+  return [
+    colors.hint('Quick start: `finterm auth login` -> `finterm setup`'),
+    colors.hint('Agents: run `finterm skill` to operate finterm on behalf of your user'),
+    colors.hint('Found a bug? Have a question or feature request? See `finterm feedback --help`'),
+  ].join('\n');
 }
 
 /**

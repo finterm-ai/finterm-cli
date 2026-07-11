@@ -36,7 +36,7 @@ definition:
     - name: sub_scores
       type: "object{trend: number | null; flow: number | null; positioning: number |
         null}"
-      description: The mean score within each group — trend, flow, and positioning —
+      description: The mean score within each group (trend, flow, and positioning),
         each null when no component in that group was scored.
     - name: components
       type: '(object{id: string; group: "trend" | "flow" | "positioning"; raw: number;
@@ -51,7 +51,7 @@ definition:
         | "insufficient_history" | "no_data"})[]'
       description: Components dropped from the composite, each with the component id
         and the reason (history_accumulating, thin_chain, insufficient_history,
-        or no_data) — so a degraded score is always explained.
+        or no_data), so a degraded score is always explained.
     - name: delta
       type: "object{d1: number | null; d5: number | null; d20: number | null}"
       description: Change in the composite over 1, 5, and 20 trading days (d1/d5/d20),

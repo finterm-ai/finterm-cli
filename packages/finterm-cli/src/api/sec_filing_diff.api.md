@@ -34,8 +34,8 @@ definition:
         | "unavailable" | "error"; added: number | null; removed: number | null;
         churn_pct: number | null; note: string | null})[]'
       description: Per-section change summary. Each row gives the section name, its
-        status, and — for changed sections — the added/removed line counts and
-        the prose churn percentage.
+        status, and, for changed sections, the added/removed line counts and the
+        prose churn percentage.
     - name: report
       type: string | null
       description: The rendered comparison report in Markdown, or null when the report
@@ -49,6 +49,6 @@ definition:
 
 Compare two SEC filings for the same company across fiscal periods and report what
 changed, section by section.
-Returns a compact per-section manifest — changed, unchanged, or unavailable, with line
-counts and a prose churn percentage for changed sections — alongside a rendered Markdown
+Returns a compact per-section manifest (changed, unchanged, or unavailable, with line
+counts and a prose churn percentage for changed sections) alongside a rendered Markdown
 report. Summary mode returns the manifest only; diff mode adds the changed hunks.

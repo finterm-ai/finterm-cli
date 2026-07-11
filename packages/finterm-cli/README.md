@@ -54,7 +54,9 @@ finterm dataroom info|list|files|search|read <room>
                                              # Read and search a downloaded Dataroom
 ```
 
-The only published bundle is `company_deep_research`.
+Two bundles are published: `company_deep_research` (async web research packet) and
+`ticker_data` (the one-call ticker snapshot; `finterm tool ticker_data <ticker>` is
+shorthand for starting a run).
 
 ### Point Data Tools
 
@@ -68,6 +70,8 @@ Published point tools:
 - `sec_filing_diff`
 - `sec_filing_fetch`
 - `sec_filings_search`
+- `stock_prices_current`
+- `technical_indicators`
 - `ticker_sentiment`
 
 ### Authentication
@@ -174,8 +178,22 @@ Copyright (C) 2026 Finterm.
 Licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
 See [LICENSE](LICENSE) for the full text.
 
-## Support
+## Feedback and Support
 
-For issues and questions, use
+Report a bug, ask a question, or request a feature straight from the CLI (works with
+any authenticated key, no Pro subscription needed):
+
+```bash
+finterm feedback bug "One-line summary" --body "Expected vs. actual, repro steps"
+```
+
+The exact payload is always shown before sending, and the global `--dry-run` previews
+it without sending. `--last` attaches the most recent failed API call's context
+(command, error code, request id) from a small local history file
+(`~/.finterm/recent-requests.json`, last 20 call outcomes, secret-redacted,
+owner-readable only) that exists solely for this purpose; nothing is sent anywhere
+until you run `finterm feedback` and see the payload.
+
+You can also use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
 <contact@finterm.ai>.

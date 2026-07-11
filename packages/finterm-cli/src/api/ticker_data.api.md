@@ -8,7 +8,7 @@ definition:
   title: Ticker Data
   summary: "The full ticker snapshot: earnings, guidance, the price reaction
     window, ratios, options sentiment, short pressure, technicals, financial
-    statements, and pre-earnings market context — in one call."
+    statements, and pre-earnings market context, in one call."
   publication_state: published
   schema: finterm.result:TickerDataBundle/v1
   fields:
@@ -173,23 +173,23 @@ produced nothing comes back as null.
 
 The bundle returns:
 
-- **earnings** — the reported quarter’s actuals, estimates, and surprise for both EPS
-  and revenue, with the fiscal quarter.
-- **guidance** — forward guidance for the period being analyzed: the revenue and EPS
+- **earnings:** the reported quarter’s actuals, estimates, and surprise for both EPS and
+  revenue, with the fiscal quarter.
+- **guidance:** forward guidance for the period being analyzed: the revenue and EPS
   ranges (min / max / mid, plus the prior range and whether the guide was revised).
-- **prices** — the event-study price window around the earnings close: the prior trading
+- **prices:** the event-study price window around the earnings close: the prior trading
   day, the event close, and the closes one and five trading days later.
-- **ratios** — trailing-twelve-month margins, return on equity, and the P/E ratio.
-- **options** — put/call sentiment with its interpretation, call and put volume, the
+- **ratios:** trailing-twelve-month margins, return on equity, and the P/E ratio.
+- **options:** put/call sentiment with its interpretation, call and put volume, the
   average spread, a liquidity grade, and a data-quality verdict so a thin sample is
   never mistaken for a confident reading.
-- **short** — short interest (shares short, days to cover) and recent short-volume
+- **short:** short interest (shares short, days to cover) and recent short-volume
   pressure.
-- **technical_indicators** — the default set: RSI(14), MACD(12/26/9), and the 20- and
+- **technical_indicators:** the default set: RSI(14), MACD(12/26/9), and the 20- and
   50-period simple moving averages.
-- **financial_statements** — a key-metric snapshot by default, or the full income
+- **financial_statements:** a key-metric snapshot by default, or the full income
   statement, balance sheet, and cash flow on request.
-- **pre_earnings_context** — the stock’s run-up into the event, where its price sits in
+- **pre_earnings_context:** the stock’s run-up into the event, where its price sits in
   its 52-week range, a volatility proxy, and the index versus its 200-day average.
 
 Each external CLI invocation creates a bundle run for one ticker; create another run for

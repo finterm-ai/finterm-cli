@@ -34,7 +34,7 @@ export const UPGRADE_URL_FALLBACK = 'https://app.finterm.ai/pricing';
 export const UPSTREAM_HTTP_CODE_PREFIX = 'UPSTREAM_HTTP_';
 
 /** Post-checkout pointer: access resumes without any CLI-side re-auth. */
-export const RESUME_LINE = 'After checkout, re-run this command — access resumes automatically.';
+export const RESUME_LINE = 'After checkout, re-run this command; access resumes automatically.';
 
 /**
  * One-active-key-per-account explanation for 401s on a previously working
@@ -44,6 +44,17 @@ export const RESUME_LINE = 'After checkout, re-run this command — access resum
 export const KEY_ROTATION_LINE =
   'Finterm keeps one active API key per account: logging in on another machine or ' +
   'regenerating the key in the dashboard revokes this one.';
+
+/**
+ * In-product report affordance on service-fault errors (the user feedback
+ * loop): the moment something looks broken is exactly when a report is
+ * cheapest to file and most useful to receive. `--last` attaches this failing
+ * call's recorded context (command, error code, request id) automatically, so
+ * the line never asks for an id the user cannot see.
+ */
+export const REPORT_FEEDBACK_LINE =
+  'If this looks wrong, report it: `finterm feedback bug "<summary>" --last` ' +
+  'attaches this failing call automatically.';
 
 /** The wire error fields the human renderer consumes. */
 export interface WireErrorLike {
@@ -69,6 +80,7 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
         status >= 500
           ? [
               'This looks like a service-side fault, not a problem with your input. Try again shortly; if it persists, contact contact@finterm.ai.',
+              REPORT_FEEDBACK_LINE,
             ]
           : [
               'The request was rejected upstream without details. Double-check your inputs; if this persists, contact contact@finterm.ai.',
@@ -98,7 +110,7 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
     case 'RATE_LIMITED':
       return {
         title: 'Rate limited',
-        remedy: ['You are sending requests too quickly — wait a moment and retry.'],
+        remedy: ['You are sending requests too quickly; wait a moment and retry.'],
       };
     case 'RUNTIME_UNAVAILABLE':
     case 'RUNTIME_AUTH_REJECTED':
@@ -107,23 +119,33 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
         title: 'Data runtime unavailable',
         remedy: [
           'The Finterm data runtime could not serve this request. Try again shortly; if it persists, contact contact@finterm.ai.',
+          REPORT_FEEDBACK_LINE,
         ],
       };
     case 'VALIDATION_ERROR':
     case 'INVALID_JSON':
       return { title: 'Invalid request', remedy: [] };
     default:
+      // Every service-fault class (any other RUNTIME_* code, upstream tool
+      // failures) carries the report affordance: not the caller's fault.
+      if (error.code.startsWith('RUNTIME_') || error.code === 'TOOL_EXECUTION_FAILED') {
+        return { title: 'Request failed', remedy: [REPORT_FEEDBACK_LINE] };
+      }
       return { title: 'Request failed', remedy: [] };
   }
 }
 
 /**
  * Build the human error block as unstyled lines (exported for tests; the
- * printer applies color).
+ * printer applies color). The server request id, when present, is printed so
+ * a report or support mail can quote it.
  */
-export function humanWireErrorLines(error: WireErrorLike): string[] {
+export function humanWireErrorLines(error: WireErrorLike, requestId?: string): string[] {
   const shape = shapeFor(error);
   const lines = [`${ICONS.ERROR} ${shape.title}`, `  ${error.message}`, `  (code: ${error.code})`];
+  if (requestId !== undefined && requestId.length > 0) {
+    lines.push(`  (request id: ${requestId})`);
+  }
   for (const remedy of shape.remedy) {
     lines.push(remedy === '' ? '' : `  ${remedy}`);
   }
@@ -164,13 +186,16 @@ async function confirmOnStderr(question: string): Promise<boolean> {
 export async function printHumanWireError(
   ctx: CommandContext,
   output: OutputManager,
-  error: WireErrorLike
+  error: WireErrorLike,
+  requestId?: string
 ): Promise<void> {
   const colors = output.getColors();
-  const [title = '', ...rest] = humanWireErrorLines(error);
+  const [title = '', ...rest] = humanWireErrorLines(error, requestId);
   console.error(colors.error(title));
   for (const line of rest) {
-    console.error(line.startsWith('  (code:') ? colors.dim(line) : line);
+    console.error(
+      line.startsWith('  (code:') || line.startsWith('  (request id:') ? colors.dim(line) : line
+    );
   }
 
   if (error.code === 'SUBSCRIPTION_REQUIRED' && canPromptForBrowser(ctx)) {

@@ -14,6 +14,11 @@ import type { CommandContext } from './context.js';
 import { CLIError } from './errors.js';
 import { printHumanWireError, UPSTREAM_HTTP_CODE_PREFIX } from './human-error.js';
 import type { OutputManager } from './output.js';
+import {
+  buildRecentRequestEntry,
+  buildTransportFailureEntry,
+  recordRecentRequest,
+} from './recent-requests.js';
 
 /** Serialization format for a wire result printed to stdout. */
 export type ApiOutputFormat = 'json' | 'yaml';
@@ -196,6 +201,31 @@ export async function apiCallToFintermWireResult<T>(
   apiCall: () => Promise<unknown>,
   fallback: FallbackResultMeta
 ): Promise<FintermWireResult<T>> {
+  // Feed the recent-requests ledger (the `finterm feedback --last` context
+  // source) with every API outcome except feedback submissions themselves —
+  // a report should attach the failing data call, not the previous report.
+  let result: FintermWireResult<T>;
+  try {
+    result = await apiCallOutcome<T>(apiCall, fallback);
+  } catch (error) {
+    // No wire result at all (timeout, DNS/socket failure, unparseable
+    // response): still worth a ledger entry — the failing command is exactly
+    // what a feedback report needs — then let the failure propagate.
+    if (fallback.tool !== 'feedback') {
+      await recordRecentRequest(buildTransportFailureEntry(fallback.tool, error));
+    }
+    throw error;
+  }
+  if (result.finterm.tool !== 'feedback') {
+    await recordRecentRequest(buildRecentRequestEntry(result));
+  }
+  return result;
+}
+
+async function apiCallOutcome<T>(
+  apiCall: () => Promise<unknown>,
+  fallback: FallbackResultMeta
+): Promise<FintermWireResult<T>> {
   try {
     return toFintermWireResult<T>(await apiCall(), fallback);
   } catch (error) {
@@ -275,7 +305,9 @@ export async function printFintermWireResult(
   options: ApiOutputOptions
 ): Promise<void> {
   if (isFintermWireErrorResult(result) && !hasRequestedApiOutputFormat(ctx, options)) {
-    await printHumanWireError(ctx, output, result.error);
+    // Pass the envelope's request id through: remedy lines reference it, so
+    // the human block must actually show it when the server sent one.
+    await printHumanWireError(ctx, output, result.error, result.finterm.request_id);
   } else {
     output.data(result, () => {
       console.log(renderFintermWireResult(result, getRequestedApiOutputFormat(ctx, options)));

@@ -58,6 +58,28 @@ jobs:
               exit 1
               ;;
           esac
+      - name: Verify the production API serves the surfaces this CLI calls
+        # The CLI is released only after its server endpoints are live: a tag
+        # must not publish an irreversible npm version whose commands 404 in
+        # production. The public OpenAPI document is the deploy readback.
+        if: github.ref_type == 'tag'
+        run: |
+          spec="$(curl -sSf https://api.finterm.ai/api/v1/openapi.json)"
+          for path in "/api/v1/feedback" "/api/v1/account"; do
+            echo "$spec" | node -e '
+              const path = process.argv[1];
+              let data = "";
+              process.stdin.on("data", (c) => (data += c));
+              process.stdin.on("end", () => {
+                const spec = JSON.parse(data);
+                if (!spec.paths || !spec.paths[path]) {
+                  console.error(`::error::production OpenAPI is missing ${path}; deploy the API before releasing.`);
+                  process.exit(1);
+                }
+                console.log(`production API serves ${path}`);
+              });
+            ' "$path"
+          done
       - name: Publish to npm (trusted publishing, OIDC)
         # Only a pushed tag publishes; workflow_dispatch runs the steps above as a dry run.
         # No NODE_AUTH_TOKEN: authentication is the OIDC id-token above, configured as a

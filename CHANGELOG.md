@@ -1,5 +1,50 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- New `finterm feedback` command family (`bug`, `question`, `feature-request` with
+  alias `feature`): report a bug, ask a question, or request a feature straight from
+  the CLI, posting to the authenticated `POST /api/v1/feedback` endpoint (works
+  without a Pro subscription). The full payload is always previewed before sending,
+  the global `--dry-run` previews without sending, and a client-side scrub rejects
+  obvious secrets before submission. Context flags: `--command`, `--tool`,
+  `--error-code`, repeatable `--request-id`; long text via `--body`,
+  `--body-file <path>`, or `--body-file -` (stdin).
+- Root `--help` now points at the feedback channel, and service-fault errors
+  (upstream 5xx, `RUNTIME_*`, tool failures) suggest `finterm feedback bug ... --last`,
+  which attaches the failing call's recorded context automatically.
+- New local recent-requests ledger (`~/.finterm/recent-requests.json`) records the
+  last 20 API call outcomes (command, tool, outcome, error code, `request_id`), and
+  `finterm feedback ... --last` attaches the most recent failed call's context
+  automatically — explicit flags win, and the payload is still previewed before
+  sending. Ledger entries are secret-redacted before they reach disk, the file is
+  written owner-readable only (0600) under a cross-process lock, and transport
+  failures (timeouts, socket errors) are recorded too.
+
+### Hardening (review follow-ups)
+
+- The feedback payload disclosure is unsuppressible: a real submission always prints
+  the exact payload, `--quiet` included (covered by a binary-level smoke test).
+- The secret scrub covers every outbound field — summary, body, and each context
+  value, including anything `--last` merged in.
+- Every submission carries a client-generated `submission_id` idempotency key, so a
+  retry after an ambiguous network outcome cannot file the report twice; 429 retries
+  now honor the server's `Retry-After`.
+- The server's 200 response is validated against the exact ack contract (schema,
+  tool, non-empty feedback id, `status: received`); anything else is a nonzero
+  contract error instead of a false "submitted".
+- Human-mode API errors print the server request id when one was returned; the
+  service-fault remedy now suggests `finterm feedback bug ... --last` instead of
+  asking for an id that was not displayed.
+- Summaries reject newlines/control characters; body size is a 16 KiB UTF-8 byte
+  contract enforced before any unbounded file/stdin read; context flags are
+  length-capped client-side to match the wire contract.
+- Releases now verify the production API serves the endpoints this CLI calls before
+  publishing, and CI scans PR metadata and commit messages with the same public
+  boundary rules as the tree.
+
 ## 0.3.1
 
 ### Fixes

@@ -116,8 +116,8 @@ One full-chain snapshot is summarized into a volatility block (30-day implied vs
 realized vol, their spread, skew, and the rank/percentile of today’s IV in the ticker’s
 own year), a flow block (today’s volume with put/call splits and reference averages),
 and a positioning block (open interest, max pain, and the largest open-interest
-strikes). It adds expected moves per expiry — always including the first expiry on or
-after the next earnings date — lognormal probability bands, quotable derived[]
+strikes). It adds expected moves per expiry (always including the first expiry on or
+after the next earnings date), lognormal probability bands, quotable derived[]
 sentences, condition flags, and a data_quality block.
 History-dependent fields report null with a days-collected count while the daily series
 fills, never fabricated.

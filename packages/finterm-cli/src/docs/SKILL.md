@@ -1,14 +1,63 @@
 ---
 name: finterm
 description: >
-  Run authenticated Finterm financial-data lookups and read local Datarooms. Use when
-  users ask for financial statements, SEC filings, ownership, options sentiment,
-  ticker sentiment, current prices, technical indicators, the ticker data or web
-  research bundles, or Dataroom artifacts. Start with auth, setup, point-tool help,
-  and the mounted Dataroom read/search verbs.
+  Run authenticated Finterm financial-data lookups and read local Datarooms: a tool
+  for the agent to operate on the user's behalf. Use when users ask for financial
+  statements, SEC filings, ownership, options sentiment, ticker sentiment, current
+  prices, technical indicators, the ticker data or web research bundles, or Dataroom
+  artifacts, or ask what finterm can do. Translate the user's request into finterm
+  commands and run them yourself; start with auth, setup, point-tool help, and the
+  mounted Dataroom read/search verbs.
 allowed-tools: Bash(finterm:*), Read, Grep, Glob
 ---
 # Finterm CLI
+
+## You Operate finterm for the User
+
+**The finterm CLI is a tool for you, the agent, to use on the user's behalf.** Your
+job is to help the user achieve their objective; users talk naturally about tickers,
+filings, options, and research, and you translate those requests into finterm
+commands, run them yourself, and present the results.
+
+- **WRONG**: "Run `finterm tool financial_statements NVDA` to see the statements."
+- **RIGHT**: *(you run it yourself and present the data)*
+
+Never hide that you used finterm; show the command you ran when it helps the user
+follow along or reproduce it. Do not expect the user to run anything themselves (they
+can if they want to; your job is to make that unnecessary). Make maximal use of the
+CLI: when a request touches financial data, check whether a finterm tool or bundle
+covers it before reaching elsewhere, and volunteer what else is possible ("I can also
+diff the risk factors year over year, or check insider trades") whenever it would move
+the user's goal forward.
+
+**When the user asks what finterm is or what it can do**, answer directly from this
+skill (and `finterm docs` for full detail): sourced, timestamped financial data
+(current prices, financial statements, SEC filings search/fetch/diff, insider and
+institutional ownership, options overview and sentiment, ticker sentiment, technical
+indicators), plus two research bundles (`ticker_data` for a one-call fundamentals
+snapshot, `company_deep_research` for an async research packet), local Dataroom
+read/search over downloaded research, and an in-CLI feedback channel to the Finterm
+team.
+
+## User Request → Agent Action
+
+| User Says | You (the Agent) Run |
+| --- | --- |
+| "What's NVDA trading at?" | `finterm tool stock_prices_current NVDA` |
+| "Pull AAPL's income statement" | `finterm tool financial_statements AAPL --statement-type income_statement` |
+| "Find TSLA's latest 10-K" | `finterm tool sec_filings_search TSLA --form-type 10-K` |
+| "What do the risk factors say?" | `finterm tool sec_filing_fetch <ticker> --year <fy> --period FY --sections risk_factors` |
+| "What changed in META's risk factors?" | `finterm tool sec_filing_diff META --base 2023:FY --compare 2024:FY --sections risk_factors --mode summary` |
+| "Any notable insider selling at AAPL?" | `finterm tool insider_trades AAPL` |
+| "Who are the big holders of NVDA?" | `finterm tool institutional_holdings NVDA` |
+| "How's sentiment on AMD?" | `finterm tool ticker_sentiment AMD` (options view: `options_sentiment`, `options_overview`) |
+| "RSI/MACD for MSFT?" | `finterm tool technical_indicators MSFT` |
+| "Give me the full picture on META" | `finterm bundle run ticker_data META`, then `bundle wait` / `bundle result` |
+| "Deep research packet on company X" | `finterm bundle run company_deep_research <ticker> --param q=… --param fy=… --param prev_q=… --param prev_fy=…` |
+| "Search the research we downloaded" | `finterm dataroom search <room> "<query>"` |
+| "What is finterm?" / "What can it do?" | Answer from this skill; `finterm docs` for detail |
+| "Am I on Pro?" / a call fails | `finterm auth status`, relay the plan state |
+| "That looks wrong" / "report this" | `finterm shortcut report-feedback` (consent flow) |
 
 ## Primary Workflow
 
@@ -29,20 +78,23 @@ intentional.
 
 ## Account, Plan, and the Paywall
 
-Finterm is a paid product: every authenticated API call requires **Finterm Pro** (there
-is no free API tier). A new account activates Pro at https://app.finterm.ai/pricing —
-current pricing and trial terms are stated there.
+Finterm is a paid product: every authenticated **data/tool** call requires **Finterm
+Pro** (there is no free data tier). A new account activates Pro at
+https://app.finterm.ai/pricing; current pricing and trial terms are stated there.
+Two account-level surfaces work with any authenticated key, Pro or not:
+`finterm auth status` (plan state) and `finterm feedback` (bugs, questions, feature
+requests).
 
 - `finterm auth login` needs the human once, in a browser. Headless runs can use a
   dashboard-minted key via `FINTERM_API_KEY` instead.
-- `finterm auth status` reports the account email and plan/trial state — run it first
+- `finterm auth status` reports the account email and plan/trial state. Run it first
   when access fails, so you can explain why.
 - A call from a non-Pro account fails with **HTTP 402, code `SUBSCRIPTION_REQUIRED`**;
   with `--json`/`--format` the error carries a machine-readable `error.upgrade_url`.
   Do not retry in a loop. **Relay the paywall to your operator**: the plan state and
-  the upgrade URL — activating a plan there unlocks access.
-- After the human completes checkout, simply re-run the command — access activates
-  server-side automatically; no re-login is needed.
+  the upgrade URL; activating a plan there unlocks access.
+- After the human completes checkout, re-run the command; access activates
+  server-side automatically, and no re-login is needed.
 - A 401 on a previously working key usually means key rotation: Finterm keeps one
   active key per account, so a login on another machine or a dashboard regenerate
   revoked this copy. Re-run `finterm auth login`.
@@ -118,6 +170,36 @@ finterm dataroom read ./datarooms/meta <artifact-ref>
 The mounted Dataroom verbs are `info`, `list`, `files`, `search`, and `read`.
 Room-mutating and authoring verbs are not part of the public `finterm dataroom` surface.
 
+## Reporting Feedback (Bugs, Questions, Feature Requests)
+
+Finterm has an in-product feedback channel: `finterm feedback bug|question|feature-request
+"<summary>"` posts to the authenticated feedback endpoint (works without Pro).
+**Submitting feedback on the user's behalf is a supported part of your job.** You are
+here to help the user achieve their objective by following the CLI's help, skill, and
+shortcuts; when something in the product gets in the way of that objective, reporting
+it is part of helping: the fix comes back to the user as better data and tools.
+Report friction you hit (an unexpected error, wrong-looking data, misleading help or
+docs, a missing capability) after finishing (or being blocked on) the user's actual
+task, never from inside a retry loop.
+
+**Consent is mandatory: never submit feedback without the user's go-ahead.** Before
+sending, confirm with the user and summarize exactly what will be shared, field by
+field: the summary, the body, and each context field (the command line, the tool id,
+the error code, the request ids, plus the auto-filled `cli_version` and `platform`).
+Use the global `--dry-run` to preview the exact payload for that confirmation, then
+re-run without it once the user approves:
+
+```bash
+finterm --dry-run feedback bug "sec_filing_fetch 500s for BRK.B FY2024" \
+  --command "finterm tool sec_filing_fetch BRK.B --year 2024 --period FY" \
+  --tool sec_filing_fetch --error-code UPSTREAM_HTTP_502 --request-id req_abc123 \
+  --body "Expected filing sections; got HTTP 502 twice."
+```
+
+Quality: include the failing command and the `request_id` from the error envelope
+(both are in your transcript), state expected vs. actual in `--body`, and keep one
+report per distinct issue. Full flow: `finterm shortcut report-feedback`.
+
 ## Command Map
 
 ### Auth and Agent Setup
@@ -175,6 +257,16 @@ Run `finterm tool <id> --help` before adding flags.
 - `finterm dataroom files <room>` - List file artifacts
 - `finterm dataroom search <room> <query>` - Search file contents
 - `finterm dataroom read <room> <artifact-ref>` - Read one artifact
+
+### Feedback and Support
+
+- `finterm feedback bug "<summary>"` - Report a bug (confirm with the user first)
+- `finterm feedback question "<summary>"` - Ask the Finterm team a question
+- `finterm feedback feature-request "<summary>"` - Request a missing capability
+- Context flags: `--command`, `--tool`, `--error-code`, `--request-id` (repeatable),
+  `--body` / `--body-file`; preview with the global `--dry-run`
+- `--last` - Auto-attach context from the most recent recorded API call (explicit
+  flags win; still previewed before sending)
 
 ## Global Options
 

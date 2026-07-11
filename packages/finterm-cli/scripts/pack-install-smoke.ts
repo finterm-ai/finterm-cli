@@ -167,7 +167,7 @@ function main(): void {
     const docContentChecks: readonly [string[], string][] = [
       [['docs'], '# Finterm CLI Documentation'],
       [['skill'], 'Account, Plan, and the Paywall'],
-      [['skill', '--brief'], 'The API surface is paid'],
+      [['skill', '--brief'], 'API surface is paid'],
       [['prime'], 'Paid Model'],
     ];
     for (const [args, marker] of docContentChecks) {

@@ -1,8 +1,14 @@
 # Finterm CLI Documentation
 
 The Finterm CLI (`@finterm-ai/cli` package, `finterm` command) provides authenticated
-financial data lookups, company web research bundle runs, agent documentation, and local
-Dataroom reading.
+financial data lookups, company web research bundle runs, agent documentation, local
+Dataroom reading, and a built-in feedback channel to the Finterm team.
+
+Finterm is designed to drop into a coding agent: the agent operates the CLI on the
+user's behalf, translating natural requests ("what's NVDA trading at?", "diff META's
+risk factors") into finterm commands and presenting the results; `finterm setup`
+installs the agent skill and `finterm skill` / `finterm prime` load the workflow.
+Everything here also works directly from a terminal for users who prefer that.
 
 ## Installation
 
@@ -32,6 +38,7 @@ finterm skill --brief   # Short agent workflow
 finterm tool --help     # Public point-tool surface
 finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
+finterm feedback --help # Report a bug, ask a question, request a feature
 ```
 
 ## Commands
@@ -101,7 +108,10 @@ automation.
 
 #### `finterm auth status`
 
-Check the active authentication source, token id, and masked key.
+Check the active authentication source, token id, masked key, and plan/trial state.
+
+Data and tool calls require Finterm Pro; `finterm auth status` and `finterm feedback`
+work with any authenticated key.
 
 #### `finterm auth logout`
 
@@ -221,6 +231,44 @@ finterm dataroom read ./datarooms/aapl <ref>
 
 Room-mutating and authoring verbs are not exposed under `finterm dataroom`.
 
+### Feedback and Support Commands
+
+#### `finterm feedback bug|question|feature-request`
+
+Send a bug report, question, or feature request to the Finterm team directly from the
+CLI (`feature` is an alias for `feature-request`). Feedback works with any
+authenticated key; Pro is not required.
+
+The one-line summary is a positional argument (up to 200 characters). The exact payload
+always prints before sending, so you (or your agent) can see every field being shared;
+the global `--dry-run` previews the payload without sending it. Agents can submit
+feedback on the user's behalf after showing the payload and getting the user's
+go-ahead.
+
+Options:
+
+- `--body <text>` - Longer Markdown detail (up to 16 KB)
+- `--body-file <path>` - Read the body from a file, or `-` for stdin
+- `--command <command>` - The command line that hit the issue
+- `--tool <toolId>` - The tool id involved (e.g. sec_filings_search)
+- `--error-code <code>` - The error code received (e.g. RATE_LIMITED)
+- `--request-id <id>` - A related request id (repeatable, up to 8)
+- `--last` - Attach the context of the most recent failed API call from the local
+  request history; explicit flags take precedence
+
+Examples:
+
+```bash
+finterm feedback bug "options_overview returned an empty positioning book" --last
+finterm feedback question "does sec_filing_diff support S-1 filings?"
+finterm feedback feature-request "add a CSV output mode" --body-file notes.md
+```
+
+To make `--last` accurate, the CLI keeps a local history of recent API call outcomes in
+`~/.finterm/recent-requests.json` (capped at 20 entries, secret-shaped values redacted,
+file mode 0600). Feedback submissions themselves are never recorded there, and obvious
+credential shapes are rejected before any submission is sent.
+
 ## Global Options
 
 All commands support these global options:
@@ -259,8 +307,16 @@ finterm tool ticker_sentiment AAPL --json
 | --- | --- |
 | `FINTERM_API_KEY` | Account API key used for authentication (overrides the stored credentials) |
 | `FINTERM_API_URL` | Override the Finterm API base URL (default: production) |
+| `FINTERM_CONFIG` | Override the `~/.finterm` config directory (stored token, run ledger, recent-requests history) |
 | `NO_COLOR` | Disable colors |
 | `CI` | Enables non-interactive mode automatically |
+
+## Feedback and Support
+
+Report a bug, ask a question, or request a feature with `finterm feedback` (see
+[Feedback and Support Commands](#feedback-and-support-commands)). You can also use
+[GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
+<contact@finterm.ai>.
 
 ## Links
 

@@ -144,6 +144,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Ceiling on a server-stated Retry-After wait, so a bad header cannot stall the CLI. */
+const MAX_RETRY_AFTER_MS = 30000;
+
+/** Milliseconds per second, for Retry-After header conversion. */
+const MS_PER_SECOND = 1000;
+
+/**
+ * Parse a Retry-After header's delta-seconds form to milliseconds. Returns
+ * null for absent, non-numeric (HTTP-date form), or non-positive values —
+ * callers then fall back to the exponential schedule.
+ */
+export function parseRetryAfterMs(headerValue: string | null): number | null {
+  if (headerValue === null) {
+    return null;
+  }
+  const seconds = Number(headerValue.trim());
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  return Math.ceil(seconds * MS_PER_SECOND);
+}
+
 /** Error body shared by every wire response envelope. */
 export interface WireErrorBody {
   code: string;
@@ -208,6 +230,53 @@ export interface AccountData {
 export interface AccountWireResponse {
   finterm?: { schema: string; tool: string; args: Record<string, unknown>; request_id?: string };
   data?: AccountData;
+  error?: WireErrorBody;
+}
+
+/** Feedback kinds accepted by `POST /api/v1/feedback` (wire values, snake_case). */
+export type FeedbackKind = 'bug' | 'question' | 'feature_request';
+
+/**
+ * Structured context attached to a feedback submission. Only these keys exist
+ * on the wire contract — the server rejects unknown keys rather than stripping
+ * them. All values are caller-visible (previewed before sending).
+ */
+export interface FeedbackContext {
+  cli_version?: string;
+  platform?: string;
+  command?: string;
+  tool_id?: string;
+  error_code?: string;
+  /** Up to 8 request_id values from affected responses. */
+  request_ids?: string[];
+}
+
+/** `POST /api/v1/feedback` request body (snake_case per the wire convention). */
+export interface FeedbackSubmission {
+  kind: FeedbackKind;
+  /** One-line summary, at most 200 characters. */
+  summary: string;
+  /**
+   * Client-generated idempotency id (one per user invocation): transport
+   * retries after an ambiguous outcome re-send the same id, and the server
+   * returns the original ack instead of storing a duplicate report.
+   */
+  submission_id: string;
+  /** Optional Markdown detail, at most 16 KB. */
+  body?: string;
+  context?: FeedbackContext;
+}
+
+/** `POST /api/v1/feedback` ack payload. */
+export interface FeedbackAckData {
+  feedback_id: string;
+  status: 'received';
+}
+
+/** Wire envelope for the feedback ack: `{finterm, data}` on success. */
+export interface FeedbackAckWireResponse {
+  finterm?: { schema: string; tool: string; args: Record<string, unknown>; request_id?: string };
+  data?: FeedbackAckData;
   error?: WireErrorBody;
 }
 
@@ -613,6 +682,13 @@ export interface FintermAPIClient {
    */
   account(): Promise<AccountWireResponse>;
 
+  /**
+   * Submit product feedback (`POST /api/v1/feedback`) — works for free
+   * accounts (token required, Pro NOT required); never cached, so every
+   * submission actually reaches the server.
+   */
+  submitFeedback(submission: FeedbackSubmission): Promise<FeedbackAckWireResponse>;
+
   // SEC endpoints (token required)
   secFilingsSearch(params: {
     ticker: string;
@@ -845,7 +921,15 @@ class LiveFintermAPIClient implements FintermAPIClient {
             const errorData = { status: response.status, ...errorBody };
             if (shouldRetry(errorData, attempt)) {
               lastError = errorData;
-              const backoff = calculateBackoff(attempt);
+              // A server-stated Retry-After (rate limits) overrides the
+              // exponential schedule: retrying sooner only adds blocked
+              // traffic against a limiter that already told us when to come
+              // back. Capped so a hostile/buggy header cannot stall the CLI.
+              const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'));
+              const backoff =
+                retryAfterMs !== null
+                  ? Math.min(retryAfterMs, MAX_RETRY_AFTER_MS)
+                  : calculateBackoff(attempt);
               await sleep(backoff);
               continue;
             }
@@ -947,6 +1031,26 @@ class LiveFintermAPIClient implements FintermAPIClient {
     // GET requests are never cached (see request()), which matters here: plan
     // state must be fresh immediately after a checkout.
     return this.request('GET', '/api/v1/account', undefined, AUTHENTICATED_REQUEST_OPTIONS);
+  }
+
+  async submitFeedback(submission: FeedbackSubmission): Promise<FeedbackAckWireResponse> {
+    // cacheable: false is load-bearing: POSTs default to cacheable, and a
+    // cached ack would silently swallow a repeat submission.
+    const body: Record<string, unknown> = {
+      kind: submission.kind,
+      summary: submission.summary,
+      submission_id: submission.submission_id,
+    };
+    if (submission.body !== undefined) {
+      body.body = submission.body;
+    }
+    if (submission.context !== undefined) {
+      body.context = submission.context;
+    }
+    return this.request('POST', '/api/v1/feedback', body, {
+      requiresAuth: true,
+      cacheable: false,
+    });
   }
 
   async loginPoll(sessionId: string, pollSecret: string): Promise<LoginPollResponse> {

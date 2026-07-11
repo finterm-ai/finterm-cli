@@ -51,7 +51,7 @@ definition:
 # SEC Filing Fetch
 
 Resolve a single SEC filing by ticker, fiscal year, and fiscal period, then return the
-requested narrative sections — such as risk factors, MD&A, business, or legal
-proceedings — as plain text.
+requested narrative sections (such as risk factors, MD&A, business, or legal
+proceedings) as plain text.
 Semantic section names map across annual and interim filer forms, so the same request
 works for a 10-K or a 10-Q.

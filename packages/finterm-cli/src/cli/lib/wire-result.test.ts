@@ -1,6 +1,11 @@
+import { mkdtempSync, existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APIRequestError } from '../../lib/api-client.js';
+import { listRecentRequests } from './recent-requests.js';
 import type { CommandContext } from './context.js';
 import { OutputManager } from './output.js';
 import {
@@ -23,6 +28,19 @@ function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     ...overrides,
   };
 }
+
+// The wrapper under test persists ledger entries as a side effect: point the
+// finterm home at a per-run temp dir so tests never touch the real
+// ~/.finterm (and prove they didn't).
+let testFintermDir: string;
+beforeEach(() => {
+  testFintermDir = mkdtempSync(join(tmpdir(), 'finterm-wire-result-test-'));
+  vi.stubEnv('FINTERM_CONFIG', testFintermDir);
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  rmSync(testFintermDir, { recursive: true, force: true });
+});
 
 const SUCCESS_RESULT: FintermWireResult<{ ok: boolean }> = {
   finterm: { schema: 'finterm.result:Test/v1', tool: 'test_tool', args: {} },
@@ -131,5 +149,23 @@ describe('apiCallToFintermWireResult (upstream synthesis)', () => {
         throw new Error('socket hang up');
       }, FALLBACK)
     ).rejects.toThrow('socket hang up');
+  });
+
+  it('records outcomes in the isolated ledger, never the real home', async () => {
+    await apiCallToFintermWireResult(async () => SUCCESS_RESULT, FALLBACK);
+    const requests = await listRecentRequests();
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({ tool: 'test_tool', outcome: 'ok' });
+    expect(existsSync(join(testFintermDir, 'recent-requests.json'))).toBe(true);
+  });
+
+  it('records a transport_error entry when the call never produced a result', async () => {
+    await expect(
+      apiCallToFintermWireResult(() => {
+        throw new Error('socket hang up');
+      }, FALLBACK)
+    ).rejects.toThrow('socket hang up');
+    const requests = await listRecentRequests();
+    expect(requests[0]).toMatchObject({ tool: 'test_tool', outcome: 'transport_error' });
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createAPIClient, type BundleRunRequest } from './api-client.js';
+import { createAPIClient, parseRetryAfterMs, type BundleRunRequest } from './api-client.js';
 
 /**
  * The public bundle-run request contract. The server's bundleRunRequestSchema is
@@ -51,5 +51,19 @@ describe('bundleRun request body (contract guard)', () => {
     for (const key of sentKeys) {
       expect(BUNDLE_RUN_CONTRACT_KEYS, `body key '${key}' is not in the contract`).toContain(key);
     }
+  });
+});
+
+describe('parseRetryAfterMs (rate-limit backoff honors the server)', () => {
+  it('parses delta-seconds to milliseconds', () => {
+    expect(parseRetryAfterMs('2')).toBe(2000);
+    expect(parseRetryAfterMs(' 12 ')).toBe(12000);
+  });
+
+  it('returns null for absent, HTTP-date, or non-positive values', () => {
+    expect(parseRetryAfterMs(null)).toBeNull();
+    expect(parseRetryAfterMs('Wed, 21 Oct 2026 07:28:00 GMT')).toBeNull();
+    expect(parseRetryAfterMs('0')).toBeNull();
+    expect(parseRetryAfterMs('-5')).toBeNull();
   });
 });
