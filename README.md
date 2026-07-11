@@ -17,7 +17,7 @@ finterm auth login
 
 # Run a company web research bundle and sync its output locally.
 # Live runs require the fiscal-period params (current and prior quarter/year).
-finterm bundle run company_web_research AAPL \
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle wait <runId>
 finterm bundle download <runId> --room ./datarooms/aapl
@@ -43,9 +43,9 @@ Dataroom sync:
 
 ```bash
 finterm bundle catalog                       # List available research bundles
-finterm bundle describe company_web_research # Show one bundle's descriptor
+finterm bundle describe company_deep_research # Show one bundle's descriptor
 # Start a live web research run (fiscal-period params are required):
-finterm bundle run company_web_research AAPL \
+finterm bundle run company_deep_research AAPL \
   --param q=Q1 --param fy=2025 --param prev_q=Q4 --param prev_fy=2024
 finterm bundle status|wait|result <runId>    # Inspect or poll a run
 finterm bundle download <runId> --room <dir> # Sync published run files into a local room
@@ -54,7 +54,9 @@ finterm dataroom info|list|files|search|read <room>
                                              # Read and search a downloaded Dataroom
 ```
 
-The only published bundle is `company_web_research`.
+Two bundles are published: `company_deep_research` (async web research packet) and
+`ticker_data` (the one-call ticker snapshot; `finterm tool ticker_data <ticker>` is
+shorthand for starting a run).
 
 ### Point Data Tools
 
@@ -68,6 +70,8 @@ Published point tools:
 - `sec_filing_diff`
 - `sec_filing_fetch`
 - `sec_filings_search`
+- `stock_prices_current`
+- `technical_indicators`
 - `ticker_sentiment`
 
 ### Authentication
@@ -99,6 +103,8 @@ finterm auth status  # Check account email, plan/trial state, and the stored key
 - `FINTERM_API_URL`: Finterm API base URL (default: production)
 - `FINTERM_API_KEY`: Account API key override (from the dashboard or
   `finterm auth login`)
+- `FINTERM_CONFIG`: Override the `~/.finterm` config directory (stored token, run
+  ledger, and the recent-requests history used by `finterm feedback --last`)
 
 ## Commands
 
@@ -131,6 +137,17 @@ finterm resources --list   # List reference resources
 finterm setup              # Install supported agent integration files
 finterm setup --check      # Verify the skill and setup state
 ```
+
+### Feedback & Support
+
+```bash
+finterm feedback bug "<summary>"             # Report a bug
+finterm feedback question "<summary>"        # Ask the Finterm team a question
+finterm feedback feature-request "<summary>" # Request a missing capability
+```
+
+Works with any authenticated key (no Pro needed); the exact payload always prints
+before sending. See [Feedback and Support](#feedback-and-support) below.
 
 ## Development
 

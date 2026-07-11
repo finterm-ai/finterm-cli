@@ -25,13 +25,18 @@ The CLI deliberately exposes a narrow surface:
 
 - **Point tools** (`finterm tool <id>`): `financial_statements`, `insider_trades`,
   `institutional_holdings`, `options_overview`, `options_sentiment`, `sec_filing_diff`,
-  `sec_filing_fetch`, `sec_filings_search`, `ticker_sentiment`.
-- **Research bundle** (`finterm bundle run <id> <ticker>`): `company_web_research`. Live
-  runs require the fiscal-period parameters
+  `sec_filing_fetch`, `sec_filings_search`, `stock_prices_current`,
+  `technical_indicators`, `ticker_sentiment`.
+- **Bundles** (`finterm bundle run <id> <ticker>`): `company_deep_research` and
+  `ticker_data`. Live `company_deep_research` runs require the fiscal-period parameters
   `--param q=<n> --param fy=<year> --param prev_q=<n> --param prev_fy=<year>`; a run
   without them is rejected before the API call.
 - **Dataroom** (`finterm dataroom <verb> <room>`): `info`, `list`, `files`, `search`,
   `read`.
+- **Feedback** (`finterm feedback bug|question|feature-request "<summary>"`): the
+  in-CLI channel to the Finterm team; works with any authenticated key (no Pro).
+  Agents can submit feedback on the user's behalf — the payload always prints before
+  sending, and submission happens only with the user's explicit go-ahead.
 
 The canonical lists are `FINTERM_TOOL_IDS` in `src/api/toolIds.ts` and
 `PUBLISHED_BUNDLE_NAMES` in `src/cli/commands/bundle.ts`. A startup guard rejects drift
@@ -54,7 +59,8 @@ the package).
 ## Rules
 
 - The repo ships one npm package named `@finterm-ai/cli` and one binary named `finterm`.
-- Use `contact@finterm.ai` for public support and security contacts.
+- Use `finterm feedback` for in-CLI bug reports, questions, and feature requests;
+  `contact@finterm.ai` remains the direct support and security contact.
 - Install dependencies with `pnpm install --frozen-lockfile`. The project `.npmrc`
   enforces a 14-day package release-age gate; see
   [SUPPLY-CHAIN-SECURITY.md](SUPPLY-CHAIN-SECURITY.md).

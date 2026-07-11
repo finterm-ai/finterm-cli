@@ -13,6 +13,11 @@ Send a bug report, question, or feature request to the Finterm team with
 `finterm feedback`. It posts to the authenticated feedback endpoint (works without a
 Pro subscription), so friction you hit reaches the people who can fix it.
 
+Submitting feedback on the user's behalf is a supported part of your job: you help the
+user achieve their objective by following the CLI's help, skill, and shortcuts, and
+when the product itself gets in the way, reporting it — with the user's consent — is
+how the loop closes and the product improves for them.
+
 ## When to Report
 
 Report after you have finished (or are genuinely blocked on) the user's actual task —
@@ -28,8 +33,8 @@ those are working as designed; relay them to your operator instead.
 
 ## Consent Is Mandatory
 
-**Never submit feedback autonomously.** Before sending, you MUST confirm with the user
-and summarize exactly what will be shared, field by field:
+**Never submit feedback without the user's go-ahead.** Before sending, you MUST
+confirm with the user and summarize exactly what will be shared, field by field:
 
 1. Build the command, then preview the exact payload without sending:
 

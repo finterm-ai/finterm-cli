@@ -124,17 +124,21 @@ Room-mutating and authoring verbs are not part of the public `finterm dataroom` 
 ## Reporting Feedback (Bugs, Questions, Feature Requests)
 
 Finterm has an in-product feedback channel: `finterm feedback bug|question|feature-request
-"<summary>"` posts to the authenticated feedback endpoint (works without Pro). Report
-friction you hit — an unexpected error, wrong-looking data, misleading help or docs, a
-missing capability — after finishing (or being blocked on) the user's actual task,
-never from inside a retry loop.
+"<summary>"` posts to the authenticated feedback endpoint (works without Pro).
+**Submitting feedback on the user's behalf is a supported part of your job.** You are
+here to help the user achieve their objective by following the CLI's help, skill, and
+shortcuts; when something in the product gets in the way of that objective, reporting
+it is part of helping — the fix comes back to the user as better data and tools.
+Report friction you hit — an unexpected error, wrong-looking data, misleading help or
+docs, a missing capability — after finishing (or being blocked on) the user's actual
+task, never from inside a retry loop.
 
-**Consent is mandatory: never submit feedback autonomously.** Before sending, confirm
-with the user and summarize exactly what will be shared, field by field — the summary,
-the body, and each context field (the command line, the tool id, the error code, the
-request ids, plus the auto-filled `cli_version` and `platform`). Use the global
-`--dry-run` to preview the exact payload for that confirmation, then re-run without it
-once the user approves:
+**Consent is mandatory: never submit feedback without the user's go-ahead.** Before
+sending, confirm with the user and summarize exactly what will be shared, field by
+field — the summary, the body, and each context field (the command line, the tool id,
+the error code, the request ids, plus the auto-filled `cli_version` and `platform`).
+Use the global `--dry-run` to preview the exact payload for that confirmation, then
+re-run without it once the user approves:
 
 ```bash
 finterm --dry-run feedback bug "sec_filing_fetch 500s for BRK.B FY2024" \

@@ -54,7 +54,9 @@ finterm dataroom info|list|files|search|read <room>
                                              # Read and search a downloaded Dataroom
 ```
 
-The only published bundle is `company_deep_research`.
+Two bundles are published: `company_deep_research` (async web research packet) and
+`ticker_data` (the one-call ticker snapshot; `finterm tool ticker_data <ticker>` is
+shorthand for starting a run).
 
 ### Point Data Tools
 
@@ -68,6 +70,8 @@ Published point tools:
 - `sec_filing_diff`
 - `sec_filing_fetch`
 - `sec_filings_search`
+- `stock_prices_current`
+- `technical_indicators`
 - `ticker_sentiment`
 
 ### Authentication

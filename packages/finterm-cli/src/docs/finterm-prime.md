@@ -80,10 +80,11 @@ Only `info`, `list`, `files`, `search`, and `read` are exposed under `finterm da
 ## Reporting Feedback
 
 `finterm feedback bug|question|feature-request "<summary>"` reports friction to the
-Finterm team (works without Pro). **Never submit autonomously**: preview the payload
-with `--dry-run`, summarize every shared field to the user (summary, body, command,
-tool id, error code, request ids, `cli_version`, `platform`), and send only after they
-approve. Details: `finterm shortcut report-feedback`.
+Finterm team (works without Pro). Submitting on the user's behalf is part of helping
+them — but **never without their go-ahead**: preview the payload with `--dry-run`,
+summarize every shared field to the user (summary, body, command, tool id, error code,
+request ids, `cli_version`, `platform`), and send only after they approve.
+Details: `finterm shortcut report-feedback`.
 
 ## Global Options
 

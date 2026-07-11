@@ -65,13 +65,15 @@ The mounted Dataroom surface is `info`, `list`, `files`, `search`, and `read`.
 
 ## Reporting Feedback
 
-Report friction (unexpected errors, wrong-looking data, misleading help, missing
-capabilities) with `finterm feedback bug|question|feature-request "<summary>"` — after
-the user's task is done or blocked, never in a retry loop.
-**Consent is mandatory: never submit autonomously.** Preview the exact payload with the
-global `--dry-run`, summarize every field to the user (summary, body, command line,
-tool id, error code, request ids, `cli_version`, `platform`), and send only after they
-approve. Include the failing command and `request_id`.
+Submitting feedback on the user's behalf is part of helping them: report friction that
+got in the way of their objective (unexpected errors, wrong-looking data, misleading
+help, missing capabilities) with
+`finterm feedback bug|question|feature-request "<summary>"` — after the user's task is
+done or blocked, never in a retry loop.
+**Consent is mandatory: never submit without the user's go-ahead.** Preview the exact
+payload with the global `--dry-run`, summarize every field to the user (summary, body,
+command line, tool id, error code, request ids, `cli_version`, `platform`), and send
+only after they approve. Include the failing command and `request_id`.
 Full flow: `finterm shortcut report-feedback`.
 
 ## Secondary Surfaces
