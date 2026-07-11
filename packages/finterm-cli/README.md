@@ -191,7 +191,7 @@ The exact payload is always shown before sending, and the global `--dry-run` pre
 it without sending. `--last` attaches the most recent failed API call's context
 (command, error code, request id) from a small local history file
 (`~/.finterm/recent-requests.json`, last 20 call outcomes, secret-redacted,
-owner-readable only) that exists solely for this purpose — nothing is sent anywhere
+owner-readable only) that exists solely for this purpose; nothing is sent anywhere
 until you run `finterm feedback` and see the payload.
 
 You can also use

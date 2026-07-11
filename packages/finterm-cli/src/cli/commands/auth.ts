@@ -89,11 +89,11 @@ export function planStateLines(plan: PlanState): string[] {
     const upgradeUrl = plan.upgradeUrl ?? UPGRADE_URL_FALLBACK;
     if (plan.status === 'past_due' || plan.status === 'unpaid') {
       return [
-        'Plan: payment failed — API access is paused.',
+        'Plan: payment failed; API access is paused.',
         `Update your card to restore access: ${upgradeUrl}`,
       ];
     }
-    return ['Plan: free — API access requires Pro.', `Upgrade: ${upgradeUrl}`];
+    return ['Plan: free; API access requires Pro.', `Upgrade: ${upgradeUrl}`];
   }
   if (plan.status === 'trialing' && plan.trialEndsAt) {
     return [`Plan: Pro (trial ends ${isoDate(plan.trialEndsAt)})`];

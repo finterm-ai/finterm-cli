@@ -35,7 +35,7 @@ The CLI deliberately exposes a narrow surface:
   `read`.
 - **Feedback** (`finterm feedback bug|question|feature-request "<summary>"`): the
   in-CLI channel to the Finterm team; works with any authenticated key (no Pro).
-  Agents can submit feedback on the user's behalf — the payload always prints before
+  Agents can submit feedback on the user's behalf: the payload always prints before
   sending, and submission happens only with the user's explicit go-ahead.
 
 The canonical lists are `FINTERM_TOOL_IDS` in `src/api/toolIds.ts` and

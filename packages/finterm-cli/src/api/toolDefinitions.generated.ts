@@ -57,7 +57,7 @@ export const FINTERM_TOOL_DEFINITIONS: Record<string, FintermToolDefinition> = {
   ticker_data: {
     title: 'Ticker Data',
     summary:
-      'The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context — in one call.',
+      'The full ticker snapshot: earnings, guidance, the price reaction window, ratios, options sentiment, short pressure, technicals, financial statements, and pre-earnings market context, in one call.',
   },
   ticker_sentiment: {
     title: 'Ticker Sentiment',

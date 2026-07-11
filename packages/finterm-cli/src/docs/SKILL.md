@@ -1,11 +1,11 @@
 ---
 name: finterm
 description: >
-  Run authenticated Finterm financial-data lookups and read local Datarooms — a tool
+  Run authenticated Finterm financial-data lookups and read local Datarooms: a tool
   for the agent to operate on the user's behalf. Use when users ask for financial
   statements, SEC filings, ownership, options sentiment, ticker sentiment, current
   prices, technical indicators, the ticker data or web research bundles, or Dataroom
-  artifacts — or ask what finterm can do. Translate the user's request into finterm
+  artifacts, or ask what finterm can do. Translate the user's request into finterm
   commands and run them yourself; start with auth, setup, point-tool help, and the
   mounted Dataroom read/search verbs.
 allowed-tools: Bash(finterm:*), Read, Grep, Glob
@@ -22,19 +22,19 @@ commands, run them yourself, and present the results.
 - **WRONG**: "Run `finterm tool financial_statements NVDA` to see the statements."
 - **RIGHT**: *(you run it yourself and present the data)*
 
-Never hide that you used finterm — show the command you ran when it helps the user
-follow along or reproduce it — but do not expect the user to run anything themselves
-(they can if they want to; your job is to make that unnecessary). Make maximal use of
-the CLI: when a request touches financial data, check whether a finterm tool or bundle
+Never hide that you used finterm; show the command you ran when it helps the user
+follow along or reproduce it. Do not expect the user to run anything themselves (they
+can if they want to; your job is to make that unnecessary). Make maximal use of the
+CLI: when a request touches financial data, check whether a finterm tool or bundle
 covers it before reaching elsewhere, and volunteer what else is possible ("I can also
 diff the risk factors year over year, or check insider trades") whenever it would move
 the user's goal forward.
 
 **When the user asks what finterm is or what it can do**, answer directly from this
-skill (and `finterm docs` for full detail): sourced, timestamped financial data —
-current prices, financial statements, SEC filings search/fetch/diff, insider and
+skill (and `finterm docs` for full detail): sourced, timestamped financial data
+(current prices, financial statements, SEC filings search/fetch/diff, insider and
 institutional ownership, options overview and sentiment, ticker sentiment, technical
-indicators — plus two research bundles (`ticker_data` for a one-call fundamentals
+indicators), plus two research bundles (`ticker_data` for a one-call fundamentals
 snapshot, `company_deep_research` for an async research packet), local Dataroom
 read/search over downloaded research, and an in-CLI feedback channel to the Finterm
 team.
@@ -80,21 +80,21 @@ intentional.
 
 Finterm is a paid product: every authenticated **data/tool** call requires **Finterm
 Pro** (there is no free data tier). A new account activates Pro at
-https://app.finterm.ai/pricing — current pricing and trial terms are stated there.
+https://app.finterm.ai/pricing; current pricing and trial terms are stated there.
 Two account-level surfaces work with any authenticated key, Pro or not:
 `finterm auth status` (plan state) and `finterm feedback` (bugs, questions, feature
 requests).
 
 - `finterm auth login` needs the human once, in a browser. Headless runs can use a
   dashboard-minted key via `FINTERM_API_KEY` instead.
-- `finterm auth status` reports the account email and plan/trial state — run it first
+- `finterm auth status` reports the account email and plan/trial state. Run it first
   when access fails, so you can explain why.
 - A call from a non-Pro account fails with **HTTP 402, code `SUBSCRIPTION_REQUIRED`**;
   with `--json`/`--format` the error carries a machine-readable `error.upgrade_url`.
   Do not retry in a loop. **Relay the paywall to your operator**: the plan state and
-  the upgrade URL — activating a plan there unlocks access.
-- After the human completes checkout, simply re-run the command — access activates
-  server-side automatically; no re-login is needed.
+  the upgrade URL; activating a plan there unlocks access.
+- After the human completes checkout, re-run the command; access activates
+  server-side automatically, and no re-login is needed.
 - A 401 on a previously working key usually means key rotation: Finterm keeps one
   active key per account, so a login on another machine or a dashboard regenerate
   revoked this copy. Re-run `finterm auth login`.
@@ -177,14 +177,14 @@ Finterm has an in-product feedback channel: `finterm feedback bug|question|featu
 **Submitting feedback on the user's behalf is a supported part of your job.** You are
 here to help the user achieve their objective by following the CLI's help, skill, and
 shortcuts; when something in the product gets in the way of that objective, reporting
-it is part of helping — the fix comes back to the user as better data and tools.
-Report friction you hit — an unexpected error, wrong-looking data, misleading help or
-docs, a missing capability — after finishing (or being blocked on) the user's actual
+it is part of helping: the fix comes back to the user as better data and tools.
+Report friction you hit (an unexpected error, wrong-looking data, misleading help or
+docs, a missing capability) after finishing (or being blocked on) the user's actual
 task, never from inside a retry loop.
 
 **Consent is mandatory: never submit feedback without the user's go-ahead.** Before
 sending, confirm with the user and summarize exactly what will be shared, field by
-field — the summary, the body, and each context field (the command line, the tool id,
+field: the summary, the body, and each context field (the command line, the tool id,
 the error code, the request ids, plus the auto-filled `cli_version` and `platform`).
 Use the global `--dry-run` to preview the exact payload for that confirmation, then
 re-run without it once the user approves:
@@ -258,7 +258,7 @@ Run `finterm tool <id> --help` before adding flags.
 - `finterm dataroom search <room> <query>` - Search file contents
 - `finterm dataroom read <room> <artifact-ref>` - Read one artifact
 
-### Feedback & Support
+### Feedback and Support
 
 - `finterm feedback bug "<summary>"` - Report a bug (confirm with the user first)
 - `finterm feedback question "<summary>"` - Ask the Finterm team a question

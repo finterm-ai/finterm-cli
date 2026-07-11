@@ -40,7 +40,7 @@ The data/tool API surface is paid (Finterm Pro); `finterm auth status` and
 `finterm feedback` work with any authenticated key. On a 402
 `SUBSCRIPTION_REQUIRED`, do not retry in a loop: relay the upgrade URL
 (`error.upgrade_url`, or https://app.finterm.ai/pricing) to your operator and re-run
-after checkout. On a 401 for a previously working key, the key was rotated — re-run
+after checkout. On a 401 for a previously working key, the key was rotated; re-run
 `finterm auth login`.
 
 ## Bundles
@@ -76,7 +76,7 @@ The mounted Dataroom surface is `info`, `list`, `files`, `search`, and `read`.
 Submitting feedback on the user's behalf is part of helping them: report friction that
 got in the way of their objective (unexpected errors, wrong-looking data, misleading
 help, missing capabilities) with
-`finterm feedback bug|question|feature-request "<summary>"` — after the user's task is
+`finterm feedback bug|question|feature-request "<summary>"`, after the user's task is
 done or blocked, never in a retry loop.
 **Consent is mandatory: never submit without the user's go-ahead.** Preview the exact
 payload with the global `--dry-run`, summarize every field to the user (summary, body,

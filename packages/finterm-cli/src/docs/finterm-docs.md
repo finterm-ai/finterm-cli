@@ -6,7 +6,7 @@ Dataroom reading, and a built-in feedback channel to the Finterm team.
 
 Finterm is designed to drop into a coding agent: the agent operates the CLI on the
 user's behalf, translating natural requests ("what's NVDA trading at?", "diff META's
-risk factors") into finterm commands and presenting the results — `finterm setup`
+risk factors") into finterm commands and presenting the results; `finterm setup`
 installs the agent skill and `finterm skill` / `finterm prime` load the workflow.
 Everything here also works directly from a terminal for users who prefer that.
 
@@ -231,13 +231,13 @@ finterm dataroom read ./datarooms/aapl <ref>
 
 Room-mutating and authoring verbs are not exposed under `finterm dataroom`.
 
-### Feedback & Support Commands
+### Feedback and Support Commands
 
 #### `finterm feedback bug|question|feature-request`
 
 Send a bug report, question, or feature request to the Finterm team directly from the
 CLI (`feature` is an alias for `feature-request`). Feedback works with any
-authenticated key — Pro is not required.
+authenticated key; Pro is not required.
 
 The one-line summary is a positional argument (up to 200 characters). The exact payload
 always prints before sending, so you (or your agent) can see every field being shared;
@@ -314,7 +314,7 @@ finterm tool ticker_sentiment AAPL --json
 ## Feedback and Support
 
 Report a bug, ask a question, or request a feature with `finterm feedback` (see
-[Feedback & Support Commands](#feedback--support-commands)). You can also use
+[Feedback and Support Commands](#feedback-and-support-commands)). You can also use
 [GitHub Issues](https://github.com/finterm-ai/finterm-cli/issues) or email
 <contact@finterm.ai>.
 

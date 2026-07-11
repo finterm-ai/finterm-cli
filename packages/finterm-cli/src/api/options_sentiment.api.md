@@ -52,6 +52,6 @@ Measure options-market sentiment for one underlying symbol on a specific date.
 Returns the put/call volume ratio and its interpretation (below 0.7 = bullish, 0.7–1.0 =
 neutral, above 1.0 = bearish), call and put volume, the average bid/ask spread, and a
 liquidity grade. A data_quality block reports whether the sample is solid ("ok"), empty
-("no_data" — e.g. a non-trading day), or too small to trust ("thin_sample"), so a
-reading is never mistaken for a confident one.
+("no_data", e.g. a non-trading day), or too small to trust ("thin_sample"), so a reading
+is never mistaken for a confident one.
 The date is required and identifies which day to report.

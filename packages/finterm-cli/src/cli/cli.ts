@@ -181,7 +181,7 @@ export function createProgram(): Command {
   program.commandsGroup('Point Data Tools:');
   program.addCommand(createToolCommand({ experimental: isExperimentalMode() }));
 
-  program.commandsGroup('Feedback & Support:');
+  program.commandsGroup('Feedback and Support:');
   program.addCommand(feedbackCommand);
 
   applyColoredHelpToAllCommands(program);

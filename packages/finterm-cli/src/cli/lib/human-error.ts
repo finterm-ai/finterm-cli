@@ -34,7 +34,7 @@ export const UPGRADE_URL_FALLBACK = 'https://app.finterm.ai/pricing';
 export const UPSTREAM_HTTP_CODE_PREFIX = 'UPSTREAM_HTTP_';
 
 /** Post-checkout pointer: access resumes without any CLI-side re-auth. */
-export const RESUME_LINE = 'After checkout, re-run this command — access resumes automatically.';
+export const RESUME_LINE = 'After checkout, re-run this command; access resumes automatically.';
 
 /**
  * One-active-key-per-account explanation for 401s on a previously working
@@ -110,7 +110,7 @@ function shapeFor(error: WireErrorLike): HumanErrorShape {
     case 'RATE_LIMITED':
       return {
         title: 'Rate limited',
-        remedy: ['You are sending requests too quickly — wait a moment and retry.'],
+        remedy: ['You are sending requests too quickly; wait a moment and retry.'],
       };
     case 'RUNTIME_UNAVAILABLE':
     case 'RUNTIME_AUTH_REJECTED':

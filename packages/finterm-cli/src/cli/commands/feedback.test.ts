@@ -60,11 +60,11 @@ describe('feedback command tree', () => {
     }
   });
 
-  it('is registered on the root program under Feedback & Support', () => {
+  it('is registered on the root program under Feedback and Support', () => {
     const program = createProgram();
     expect(program.commands.map((cmd) => cmd.name())).toContain('feedback');
     const help = program.helpInformation();
-    expect(help).toContain('Feedback & Support:');
+    expect(help).toContain('Feedback and Support:');
     expect(help).toContain('feedback');
   });
 
