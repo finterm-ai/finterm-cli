@@ -35,11 +35,20 @@ const LEDGER_FILE_MODE = 0o600;
 /** How long one lock attempt waits before retrying (ms). */
 const LOCK_RETRY_DELAY_MS = 15;
 
-/** Total budget for acquiring the ledger lock before giving up (best-effort). */
-const LOCK_ACQUIRE_BUDGET_MS = 300;
+/**
+ * Total budget for acquiring the ledger lock before giving up (best-effort).
+ * Sized so a burst of parallel CLI processes on a slow machine drains fully:
+ * each holder keeps the lock for milliseconds, so even ten queued writers
+ * finish well inside the budget. Uncontended acquisition is instant.
+ */
+const LOCK_ACQUIRE_BUDGET_MS = 2000;
 
-/** A lock directory older than this is from a dead process; steal it. */
-const LOCK_STALE_MS = 2000;
+/**
+ * A lock directory older than this is from a dead process; steal it. Must
+ * stay well above both a live holder's hold time (milliseconds) and the
+ * acquire budget, so a waiter never steals from a slow-but-alive holder.
+ */
+const LOCK_STALE_MS = 8000;
 
 /** How a recorded call ended. */
 export type RecentRequestOutcome = 'ok' | 'error' | 'transport_error';
