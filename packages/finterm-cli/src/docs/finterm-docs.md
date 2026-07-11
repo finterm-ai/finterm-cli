@@ -4,6 +4,12 @@ The Finterm CLI (`@finterm-ai/cli` package, `finterm` command) provides authenti
 financial data lookups, company web research bundle runs, agent documentation, local
 Dataroom reading, and a built-in feedback channel to the Finterm team.
 
+Finterm is designed to drop into a coding agent: the agent operates the CLI on the
+user's behalf, translating natural requests ("what's NVDA trading at?", "diff META's
+risk factors") into finterm commands and presenting the results — `finterm setup`
+installs the agent skill and `finterm skill` / `finterm prime` load the workflow.
+Everything here also works directly from a terminal for users who prefer that.
+
 ## Installation
 
 Run without installing:

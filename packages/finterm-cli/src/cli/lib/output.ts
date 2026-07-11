@@ -90,6 +90,7 @@ export function createHelpEpilog(colorOption: ColorOption = 'auto'): string {
   // and the feedback pointer is the in-product support channel.
   return [
     colors.hint('Quick start: `finterm auth login` -> `finterm setup`'),
+    colors.hint('Agents: run `finterm skill` to operate finterm on behalf of your user'),
     colors.hint('Found a bug? Have a question or feature request? See `finterm feedback --help`'),
   ].join('\n');
 }

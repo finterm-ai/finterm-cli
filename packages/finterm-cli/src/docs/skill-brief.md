@@ -1,5 +1,13 @@
 # Finterm Workflow Rules (Brief)
 
+The finterm CLI is a tool for you, the agent, to operate on the user's behalf: users
+talk naturally about tickers, filings, options, and research; you translate that into
+finterm commands, run them yourself, and present the results. Don't tell the user to
+run finterm commands (they can, but your job is to make that unnecessary), don't hide
+what you ran, make maximal use of the CLI for anything touching financial data, and
+volunteer what else finterm could add when it helps. If the user asks what finterm is
+or can do, answer from `finterm skill` / `finterm docs`.
+
 ## First Path
 
 Use the authenticated public point-tool surface before composing an answer:

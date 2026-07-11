@@ -1,14 +1,63 @@
 ---
 name: finterm
 description: >
-  Run authenticated Finterm financial-data lookups and read local Datarooms. Use when
-  users ask for financial statements, SEC filings, ownership, options sentiment,
-  ticker sentiment, current prices, technical indicators, the ticker data or web
-  research bundles, or Dataroom artifacts. Start with auth, setup, point-tool help,
-  and the mounted Dataroom read/search verbs.
+  Run authenticated Finterm financial-data lookups and read local Datarooms — a tool
+  for the agent to operate on the user's behalf. Use when users ask for financial
+  statements, SEC filings, ownership, options sentiment, ticker sentiment, current
+  prices, technical indicators, the ticker data or web research bundles, or Dataroom
+  artifacts — or ask what finterm can do. Translate the user's request into finterm
+  commands and run them yourself; start with auth, setup, point-tool help, and the
+  mounted Dataroom read/search verbs.
 allowed-tools: Bash(finterm:*), Read, Grep, Glob
 ---
 # Finterm CLI
+
+## You Operate finterm for the User
+
+**The finterm CLI is a tool for you, the agent, to use on the user's behalf.** Your
+job is to help the user achieve their objective; users talk naturally about tickers,
+filings, options, and research, and you translate those requests into finterm
+commands, run them yourself, and present the results.
+
+- **WRONG**: "Run `finterm tool financial_statements NVDA` to see the statements."
+- **RIGHT**: *(you run it yourself and present the data)*
+
+Never hide that you used finterm — show the command you ran when it helps the user
+follow along or reproduce it — but do not expect the user to run anything themselves
+(they can if they want to; your job is to make that unnecessary). Make maximal use of
+the CLI: when a request touches financial data, check whether a finterm tool or bundle
+covers it before reaching elsewhere, and volunteer what else is possible ("I can also
+diff the risk factors year over year, or check insider trades") whenever it would move
+the user's goal forward.
+
+**When the user asks what finterm is or what it can do**, answer directly from this
+skill (and `finterm docs` for full detail): sourced, timestamped financial data —
+current prices, financial statements, SEC filings search/fetch/diff, insider and
+institutional ownership, options overview and sentiment, ticker sentiment, technical
+indicators — plus two research bundles (`ticker_data` for a one-call fundamentals
+snapshot, `company_deep_research` for an async research packet), local Dataroom
+read/search over downloaded research, and an in-CLI feedback channel to the Finterm
+team.
+
+## User Request → Agent Action
+
+| User Says | You (the Agent) Run |
+| --- | --- |
+| "What's NVDA trading at?" | `finterm tool stock_prices_current NVDA` |
+| "Pull AAPL's income statement" | `finterm tool financial_statements AAPL --statement-type income_statement` |
+| "Find TSLA's latest 10-K" | `finterm tool sec_filings_search TSLA --form-type 10-K` |
+| "What do the risk factors say?" | `finterm tool sec_filing_fetch <ticker> --year <fy> --period FY --sections risk_factors` |
+| "What changed in META's risk factors?" | `finterm tool sec_filing_diff META --base 2023:FY --compare 2024:FY --sections risk_factors --mode summary` |
+| "Any notable insider selling at AAPL?" | `finterm tool insider_trades AAPL` |
+| "Who are the big holders of NVDA?" | `finterm tool institutional_holdings NVDA` |
+| "How's sentiment on AMD?" | `finterm tool ticker_sentiment AMD` (options view: `options_sentiment`, `options_overview`) |
+| "RSI/MACD for MSFT?" | `finterm tool technical_indicators MSFT` |
+| "Give me the full picture on META" | `finterm bundle run ticker_data META`, then `bundle wait` / `bundle result` |
+| "Deep research packet on company X" | `finterm bundle run company_deep_research <ticker> --param q=… --param fy=… --param prev_q=… --param prev_fy=…` |
+| "Search the research we downloaded" | `finterm dataroom search <room> "<query>"` |
+| "What is finterm?" / "What can it do?" | Answer from this skill; `finterm docs` for detail |
+| "Am I on Pro?" / a call fails | `finterm auth status`, relay the plan state |
+| "That looks wrong" / "report this" | `finterm shortcut report-feedback` (consent flow) |
 
 ## Primary Workflow
 

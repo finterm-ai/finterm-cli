@@ -1,7 +1,11 @@
 # Finterm CLI Quick Context
 
 The `finterm` CLI provides authenticated financial-data lookups and local Dataroom
-reading for agents and terminal users.
+reading for agents and terminal users. As the agent, you operate finterm on the
+user's behalf: translate their natural requests into commands, run them yourself
+(don't tell the user to run them, and don't hide what you ran), make maximal use of
+the CLI for financial-data work, and suggest what else it can do when useful. If the
+user asks what finterm is or can do, answer from `finterm skill` / `finterm docs`.
 
 ## Essential Commands
 
