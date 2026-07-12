@@ -8,7 +8,7 @@ command). It has two parts:
   publish from CI with no token.
   Done once, ever.
 - **Ongoing releases** — the automated flow for every version after the first: bump,
-  tag, push. CI publishes.
+  tag, push. CI publishes to npm and writes the GitHub Release.
 
 The package lives in `packages/finterm-cli` and publishes as the scoped npm package
 `@finterm-ai/cli` with the `finterm` binary.
@@ -188,6 +188,9 @@ CI does the rest.
 1. **Bump the version** in `packages/finterm-cli/package.json` and add a `CHANGELOG.md`
    entry. Use semver: patch for fixes, minor for additive features, major for breaking
    changes. (`0.x` is pre-stable: minor bumps may carry breaking changes.)
+   The `## <version>` section becomes the GitHub Release notes, verbatim; a release
+   with a missing or empty section fails before anything uploads (a unit test also
+   enforces the entry at PR time).
 
 2. **Land it on `main`** through a pull request, green CI.
 
@@ -202,12 +205,18 @@ CI does the rest.
 Pushing a `v*` tag triggers [`release.yml`](../.github/workflows/release.yml), which:
 
 - runs `pnpm run ci` (the same full suite as PR CI),
-- verifies the tag matches `packages/finterm-cli/package.json` version and refuses a
-  dirty build version,
-- publishes over OIDC trusted publishing with provenance — no npm token anywhere.
+- verifies the tag matches `packages/finterm-cli/package.json` version, refuses a dirty
+  build version, and checks `CHANGELOG.md` has notes for the version
+  (`packages/finterm-cli/scripts/extract-changelog.mjs`) — all before anything uploads,
+- verifies the production API serves the endpoints the CLI calls (see
+  [Server-First Sequencing](#server-first-sequencing)),
+- publishes over OIDC trusted publishing with provenance — no npm token anywhere,
+- then creates the GitHub Release for the tag (or updates it on a re-run), titled
+  `v<version>`, with the version's `CHANGELOG.md` section as the notes.
 
-A `workflow_dispatch` run (the “Run workflow” button) runs every step except the
-publish, so you can dry-run the release pipeline on a branch without uploading anything.
+A `workflow_dispatch` run (the “Run workflow” button) runs every step except the publish
+and the GitHub Release, so you can dry-run the release pipeline on a branch without
+uploading anything.
 
 ### Notes
 
@@ -219,6 +228,10 @@ publish, so you can dry-run the release pipeline on a branch without uploading a
 - **Never add a `NODE_AUTH_TOKEN`/`NPM_TOKEN` secret** for releases.
   Trusted publishing is tokenless by design; a stored token reintroduces the leak risk
   it removes.
+- **The GitHub Release is written by a separate minimal job.**
+  The publish job keeps `contents: read` next to its npm OIDC identity; only the
+  `github-release` job holds `contents: write`, and it installs no dependencies and
+  runs no third-party actions — checkout, one dependency-free script, `gh`.
 
 <!-- This document follows common-doc-guidelines.md.
 -->
