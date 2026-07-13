@@ -3,8 +3,8 @@
 This repository builds the public `@finterm-ai/cli` npm package and its `finterm`
 command, a client for the Finterm API and for reading local Datarooms.
 See [README.md](README.md) for user-facing usage, [CONTRIBUTING.md](CONTRIBUTING.md) for
-the contribution flow, and [docs/RELEASING.md](docs/RELEASING.md) for the npm release
-process (one-time OIDC bootstrap and the ongoing automated flow).
+the contribution flow, and [docs/RELEASING.md](docs/RELEASING.md) for the release
+process (one-time OIDC bootstrap, then automated npm publish plus GitHub Release).
 
 ## Repository Layout
 

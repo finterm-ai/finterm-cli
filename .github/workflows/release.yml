@@ -6,13 +6,12 @@ on:
       - 'v*'
   workflow_dispatch: # build/check-only dry run; never publishes (publish is gated to tags)
 
-permissions:
-  id-token: write # OIDC trusted publishing (no token) + provenance attestation
-  contents: read
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC trusted publishing (no token) + provenance attestation
+      contents: read
     defaults:
       run:
         working-directory: packages/finterm-cli
@@ -58,6 +57,10 @@ jobs:
               exit 1
               ;;
           esac
+      - name: Verify CHANGELOG.md has notes for this version
+        # Fails BEFORE npm publish, so a tag without release notes never uploads. The
+        # github-release job below extracts the same section for the release body.
+        run: node scripts/extract-changelog.mjs "$(node -p "require('./package.json').version")" > /dev/null
       - name: Verify the production API serves the surfaces this CLI calls
         # The CLI is released only after its server endpoints are live: a tag
         # must not publish an irreversible npm version whose commands 404 in
@@ -88,3 +91,35 @@ jobs:
         # configured; the first version is published manually (the one-time bootstrap).
         if: github.ref_type == 'tag'
         run: npm publish --access public --provenance
+
+  github-release:
+    # Create the GitHub Release for the tag, with the version's CHANGELOG.md section as
+    # the notes. A separate job so the publish job keeps contents: read next to its npm
+    # OIDC identity, and the release-writing token is scoped to a job that installs no
+    # dependencies and runs no third-party actions — checkout, one dependency-free
+    # script, gh.
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create/update the release on this tag
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create or update the GitHub Release from CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          node packages/finterm-cli/scripts/extract-changelog.mjs "$VERSION" > "$NOTES"
+          prerelease=()
+          case "$VERSION" in
+            *-*) prerelease=(--prerelease) ;;
+          esac
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # Re-run after a transient failure: refresh the notes instead of failing.
+            gh release edit "$GITHUB_REF_NAME" --notes-file "$NOTES"
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" \
+              "${prerelease[@]}" --notes-file "$NOTES"
+          fi
