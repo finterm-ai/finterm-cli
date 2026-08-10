@@ -3,7 +3,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   APIResponse,
@@ -13,8 +13,9 @@ import type {
   SyncManifestData,
   SyncManifestFile,
 } from '../../lib/api-client.js';
+import { createAPIClient } from '../../lib/api-client.js';
 import { CLIError } from './errors.js';
-import { downloadBundleRunArtifacts } from './bundle-runs.js';
+import { downloadBundleRunArtifacts, getAgentRunStatus } from './bundle-runs.js';
 
 const RUN_ID = 'run_test_path_safety';
 const SIGNED_URL = 'https://example.invalid/signed/object';
@@ -98,6 +99,7 @@ describe('downloadBundleRunArtifacts path safety guard', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     if (previousConfig === undefined) {
       delete process.env.FINTERM_CONFIG;
     } else {
@@ -127,6 +129,72 @@ describe('downloadBundleRunArtifacts path safety guard', () => {
       expect(entries).toEqual([]);
     });
   }
+
+  /**
+   * Built from the API's real snake_case payloads rather than the camelCase the
+   * client happens to read. The earlier fixtures were written camelCase, which
+   * meant the suite agreed with the reader instead of with the server and kept
+   * these mismatches invisible.
+   */
+  it('derives artifact ids and next action from a live snake_case payload', async () => {
+    const runId = 'run_live_shape';
+    const wireRun = {
+      run_id: runId,
+      bundle_name: 'test_bundle',
+      descriptor_id: 'descriptor_1',
+      lifecycle: 'runtime_http',
+      status: 'succeeded',
+      normalized_request: { ticker: 'TEST', delivery_mode: 'dataroom_sync' },
+      manifest_ready: false,
+      links: {
+        self: `/api/v1/runs/${runId}`,
+        result: `/api/v1/runs/${runId}/result`,
+        artifacts: `/api/v1/runs/${runId}/artifacts`,
+        sync_manifest: `/api/v1/runs/${runId}/sync-manifest`,
+      },
+    };
+    const wireArtifacts = {
+      run_id: runId,
+      bundle_name: 'test_bundle',
+      descriptor_id: 'descriptor_1',
+      lifecycle: 'runtime_http',
+      status: 'succeeded',
+      manifest_ready: false,
+      artifacts: [
+        {
+          artifact_id: 'artifact_live_1',
+          run_id: runId,
+          artifact_type: 'dataroom',
+          download_url: SIGNED_URL,
+          checksum_sha256: 'abc123',
+        },
+      ],
+    };
+
+    // Drive the real client so the response normalizers run, rather than stubbing
+    // the client and testing the readers against a shape they never receive.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: unknown) => {
+        const body = String(url).includes('/artifacts') ? wireArtifacts : wireRun;
+        return new Response(JSON.stringify({ success: true, data: body }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      })
+    );
+    const client = createAPIClient('https://api.example.invalid', 'fint_auth_test', {
+      cacheEnabled: false,
+    });
+
+    const status = await getAgentRunStatus(client, runId);
+
+    // Previously always [] because the reader looked for `artifactId`.
+    expect(status.artifactIds).toEqual(['artifact_live_1']);
+    // delivery_mode was invisible, so an unpublished manifest never became "wait".
+    expect(status.syncManifest).toBe('not_ready');
+    expect(status.nextAction).toBe('wait');
+  });
 
   it('accepts a normal nested relative path and materializes it under the room', async () => {
     const content = 'finterm-test-content\n';

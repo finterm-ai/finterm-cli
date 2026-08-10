@@ -54,6 +54,88 @@ describe('bundleRun request body (contract guard)', () => {
   });
 });
 
+/**
+ * The API snake_cases every key, including nested objects and per-artifact
+ * entries. The normalizers only rewrote top-level keys, so nested camelCase
+ * reads silently found nothing and callers saw an empty artifact list and a
+ * missing delivery mode rather than an error. Fixtures here use the real wire
+ * shape for exactly that reason — the previous camelCase fixtures encoded the
+ * bug and hid it.
+ */
+describe('response normalizers (live snake_case wire shape)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubJson(payload: unknown): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify(payload), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+      )
+    );
+  }
+
+  const client = () =>
+    createAPIClient('https://api.example.invalid', 'fint_auth_test', { cacheEnabled: false });
+
+  it('normalizes nested normalized_request keys, not just the top level', async () => {
+    stubJson({
+      success: true,
+      data: {
+        run_id: 'run_1',
+        bundle_name: 'ticker_data',
+        descriptor_id: 'ticker_data@1',
+        status: 'succeeded',
+        normalized_request: { ticker: 'AAPL', delivery_mode: 'dataroom_sync' },
+      },
+    });
+
+    const response = await client().bundleStatus('run_1');
+
+    expect(response.data?.runId).toBe('run_1');
+    expect(response.data?.normalizedRequest.deliveryMode).toBe('dataroom_sync');
+  });
+
+  it('normalizes each artifact entry, not just the envelope around them', async () => {
+    stubJson({
+      success: true,
+      data: {
+        run_id: 'run_1',
+        bundle_name: 'ticker_data',
+        descriptor_id: 'ticker_data@1',
+        status: 'succeeded',
+        manifest_ready: true,
+        artifacts: [
+          {
+            artifact_id: 'artifact_1',
+            run_id: 'run_1',
+            artifact_type: 'dataroom',
+            content_type: 'application/zip',
+            size_bytes: 1024,
+            checksum_sha256: 'abc123',
+            download_url: 'https://downloads.example.invalid/artifact_1',
+            expires_at: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+
+    const response = await client().bundleArtifacts('run_1');
+    const artifact = response.data?.artifacts[0];
+
+    expect(artifact?.artifactId).toBe('artifact_1');
+    expect(artifact?.downloadUrl).toBe('https://downloads.example.invalid/artifact_1');
+    expect(artifact?.checksumSha256).toBe('abc123');
+    expect(artifact?.sizeBytes).toBe(1024);
+    expect(artifact?.expiresAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+});
+
 describe('parseRetryAfterMs (rate-limit backoff honors the server)', () => {
   it('parses delta-seconds to milliseconds', () => {
     expect(parseRetryAfterMs('2')).toBe(2000);

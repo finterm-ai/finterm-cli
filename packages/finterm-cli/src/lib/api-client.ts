@@ -444,6 +444,48 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Add a camelCase alias for every snake_case key, recursively.
+ *
+ * The API snake_cases every key at every depth, while this client reads
+ * camelCase. Aliasing rather than renaming keeps the original keys present, so
+ * anything reading the raw payload (or a fixture already written in camelCase)
+ * still works. An existing camelCase key always wins.
+ *
+ * Aliasing per-field by hand only ever covered the top level, which left nested
+ * reads — `normalized_request.delivery_mode`, and every per-artifact key —
+ * silently undefined: an empty artifact list and a missing delivery mode look
+ * like absent data rather than a mismatch, so the failure was invisible.
+ */
+function withCamelCaseAliases(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(withCamelCaseAliases);
+  }
+  if (!isObjectRecord(value)) {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    result[key] = withCamelCaseAliases(entry);
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (!key.includes('_')) {
+      continue;
+    }
+    const camelKey = key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
+    if (!(camelKey in result)) {
+      result[camelKey] = withCamelCaseAliases(entry);
+    }
+  }
+  return result;
+}
+
+/** Recursive camelCase aliasing for a payload known to be an object. */
+function aliasedRecord(value: unknown): Record<string, unknown> | undefined {
+  const aliased = withCamelCaseAliases(value);
+  return isObjectRecord(aliased) ? aliased : undefined;
+}
+
+/**
  * Coerce a server usage payload into {@link BundleUsageSummaryData}, accepting both
  * camelCase and snake_case keys. Returns `undefined` when nothing usable is present so
  * callers can distinguish "no usage data" from an explicit null.
@@ -478,10 +520,11 @@ function normalizeBundleUsageSummary(value: unknown): BundleUsageSummaryData | n
  * Reconcile a run payload into the camelCase client shape, tolerating snake_case keys
  * from the server and backfilling `state` from `status` so both are always populated.
  */
-function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(value: unknown): T {
-  if (!isObjectRecord(value)) {
-    return value as T;
+function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(raw: unknown): T {
+  if (!isObjectRecord(raw)) {
+    return raw as T;
   }
+  const value = aliasedRecord(raw) ?? raw;
   const links = isObjectRecord(value.links) ? value.links : undefined;
   return {
     ...value,
@@ -505,10 +548,11 @@ function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(v
 }
 
 /** Reconcile an artifacts payload into the client shape (see normalizeBundleRunData). */
-function normalizeBundleArtifactsData(value: unknown): BundleArtifactsData {
-  if (!isObjectRecord(value)) {
-    return value as BundleArtifactsData;
+function normalizeBundleArtifactsData(raw: unknown): BundleArtifactsData {
+  if (!isObjectRecord(raw)) {
+    return raw as BundleArtifactsData;
   }
+  const value = aliasedRecord(raw) ?? raw;
   return {
     ...value,
     runId: value.runId ?? value.run_id,
