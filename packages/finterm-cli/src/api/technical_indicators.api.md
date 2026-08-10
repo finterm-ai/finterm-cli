@@ -15,8 +15,9 @@ definition:
       description: The stock ticker symbol, uppercased (e.g. "AAPL").
     - name: rsi_14
       type: number
-      description: 14-period Relative Strength Index. Above 70 = overbought, below 30
-        = oversold.
+      description: 14-period Relative Strength Index. The conventional above-70
+        overbought and below-30 oversold labels are fixed heuristics, not
+        reversal forecasts.
     - name: macd_value
       type: number
       description: MACD line value (12/26/9 configuration).
@@ -38,7 +39,8 @@ definition:
 ---
 # Technical Indicators
 
-Identify overbought/oversold conditions, momentum, and trend direction using standard
-technical analysis.
-Returns RSI(14) for overbought (>70) and oversold (<30) signals, MACD
-for momentum, and the 20- and 50-period simple moving averages for trend direction.
+Calculate standard momentum and trend indicators.
+Returns RSI(14) with conventional above-70 overbought and below-30 oversold heuristic
+labels; those labels are not reversal forecasts.
+Also returns MACD for momentum and the 20- and 50-period simple moving averages for
+trend direction.
