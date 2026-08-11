@@ -20,7 +20,7 @@ read and search surface that `finterm dataroom` mounts.
 
 **Vendored code — do not edit:** the `src/` trees of `packages/dataroom` and
 `packages/dataroom-cli` are vendored byte-identical from their canonical upstream and
-verified by `pnpm dataroom:check` (wired into the `precommit` script and `pnpm ci`;
+verified by `pnpm dataroom:check` (wired into the `precommit` script and `pnpm run ci`;
 local edits fail CI). Never modify those trees here — not for fixes, lint appeasement,
 or docs. Route the change upstream and re-sync instead.
 See [docs/VENDORING.md](docs/VENDORING.md).
@@ -56,10 +56,10 @@ Run the full suite before opening a pull request:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm ci
+pnpm run ci
 ```
 
-`pnpm ci` runs format, lint and typecheck, tests, build, `publint`, the packed-artifact
+`pnpm run ci` runs format, lint and typecheck, tests, build, `publint`, the packed-artifact
 smoke test, and `pnpm public:check` (the guard that no unpublished surface leaks into
 the package).
 
@@ -72,3 +72,7 @@ the package).
   enforces a 14-day package release-age gate; see
   [SUPPLY-CHAIN-SECURITY.md](SUPPLY-CHAIN-SECURITY.md).
 - Node `>=22.12` is required (`package.json` `engines`).
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

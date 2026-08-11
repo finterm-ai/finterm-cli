@@ -8,7 +8,7 @@ definition:
   title: Financial Statements
   summary: Reported balance sheet, income statement, or cash flow for a company.
   publication_state: published
-  schema: finterm.result:FinancialStatements/v2
+  schema: finterm.result:FinancialStatements/v1
   fields:
     - name: ticker
       type: string

@@ -20,7 +20,7 @@ mistake impossible to merge rather than merely discouraged.
   vendored tree, written by the sync script.
   Do not edit it by hand.
 - `pnpm dataroom:check` recomputes the hashes and fails on any deviation.
-  It runs at the front of the `precommit` script and of `pnpm ci` (which the release
+  It runs at the front of the `precommit` script and of `pnpm run ci` (which the release
   workflow runs), so a local edit of vendored code cannot reach a release.
   Note `precommit` is a package script to run before committing — this repo installs no
   git hook that intercepts commits automatically.
@@ -54,3 +54,7 @@ configs.
 
 If `dataroom:check` fails on your branch, you (or a tool you ran) edited vendored code:
 revert the local change and follow the steps above.
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
