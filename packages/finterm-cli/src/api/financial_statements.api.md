@@ -8,7 +8,7 @@ definition:
   title: Financial Statements
   summary: Reported balance sheet, income statement, or cash flow for a company.
   publication_state: published
-  schema: finterm.result:FinancialStatements/v1
+  schema: finterm.result:FinancialStatements/v2
   fields:
     - name: ticker
       type: string
@@ -55,16 +55,19 @@ definition:
         filing_date, timeframe) plus the line items for the requested statement
         type. Amounts are in USD; a missing line item is null.
     - name: miss_reason
-      type: '"ticker_not_covered" | "no_filing_before_as_of" |
-        "no_filing_matching_filters" | "unfiled_records_only" | null'
+      type: '"ticker_not_covered" | "classification_unavailable" |
+        "no_filing_before_as_of" | "no_filing_matching_filters" |
+        "unfiled_records_only" | null'
       description: 'Why "periods" is empty, so an empty result is never ambiguous;
         null whenever periods were returned. An empty result is a stated gap,
         not an error: the request succeeded. One of "ticker_not_covered"
         (coverage is domestic XBRL filers, 10-K/10-Q, so companies filing on
         other forms report no statements here even with a long reporting
-        history), "no_filing_before_as_of" (covered, but nothing filed at or
-        before the as-of date), "no_filing_matching_filters" (covered, but no
-        filing matches the requested timeframe or fiscal period), or
+        history), "classification_unavailable" (no statement matched, but the
+        supporting checks needed to classify the gap were unavailable),
+        "no_filing_before_as_of" (covered, but nothing filed at or before the
+        as-of date), "no_filing_matching_filters" (covered, but no filing
+        matches the requested timeframe or fiscal period), or
         "unfiled_records_only" (candidate periods existed but none carried a
         filing date, so none could be shown to have been public by the as-of
         date).'
