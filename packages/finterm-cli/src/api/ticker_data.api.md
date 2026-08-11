@@ -69,14 +69,15 @@ definition:
         object{status: "ok" | "no_data" | "thin_sample"; contracts_analyzed:
         number; contracts_with_volume: number; total_volume: number} | null} |
         null'
-      description: 'Options-market sentiment: put_call_volume_ratio and its
-        interpretation (below 0.7 = bullish, 0.7–1.0 = neutral, above 1.0 =
+      description: 'Options-market sentiment: put_call_volume_ratio and its fixed
+        convention label (below 0.7 bullish, 0.7–1.0 neutral, above 1.0
         bearish), total_call_volume, total_put_volume, avg_spread_percent,
         liquidity_grade (A best to D worst), contracts_with_volume, the list of
         expirations covered, and a data_quality verdict (status "ok" / "no_data"
         / "thin_sample" with the contract and volume counts) so a thin reading
-        is never mistaken for a confident one. Null when the section produced no
-        data.'
+        is never mistaken for a confident one. The thresholds are descriptive,
+        not calibrated forecasts for a symbol or market regime. Null when the
+        section produced no data.'
     - name: short
       type: "object{shares_short: number | null; short_float_pct: number | null;
         days_to_cover: number | null; interest_as_of_date: string | null;
@@ -91,8 +92,9 @@ definition:
       type: "object{rsi_14: number | null; macd_value: number | null; macd_signal:
         number | null; macd_histogram: number | null; sma_20: number | null;
         sma_50: number | null} | null"
-      description: "The default indicator set: rsi_14 (above 70 overbought, below 30
-        oversold), macd_value, macd_signal, macd_histogram (12/26/9
+      description: "The default indicator set: rsi_14 (conventional above-70
+        overbought and below-30 oversold heuristic labels, not reversal
+        forecasts), macd_value, macd_signal, macd_histogram (12/26/9
         configuration), sma_20, and sma_50. A value is null when not computable.
         Null when the section produced no data."
     - name: financial_statements

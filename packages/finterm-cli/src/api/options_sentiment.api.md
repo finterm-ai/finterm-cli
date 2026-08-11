@@ -23,12 +23,14 @@ definition:
         total_put_volume: number; avg_spread_percent: number | null;
         liquidity_grade: "A" | "B" | "C" | "D" | null}'
       description: "Put/call sentiment for the day: put_call_volume_ratio (put volume
-        ÷ call volume; below 0.7 = bullish, 0.7–1.0 = neutral, above 1.0 =
-        bearish), the interpretation label, total_call_volume, total_put_volume,
-        avg_spread_percent (average bid/ask spread as a percent of midpoint),
-        and liquidity_grade (A best to D worst). Ratio, interpretation, spread,
-        and grade are null when there is no volume to read or spread analysis
-        was not requested."
+        ÷ call volume; the fixed convention labels below 0.7 bullish, 0.7–1.0
+        neutral, and above 1.0 bearish), the interpretation label,
+        total_call_volume, total_put_volume, avg_spread_percent (average bid/ask
+        spread as a percent of midpoint), and liquidity_grade (A best to D
+        worst). Ratio, interpretation, spread, and grade are null when there is
+        no volume to read or spread analysis was not requested. The thresholds
+        are descriptive conventions, not calibrated forecasts for a symbol or
+        market regime."
     - name: data_quality
       type: 'object{status: "ok" | "no_data" | "thin_sample"; contracts_analyzed:
         number; contracts_with_volume: number; total_volume: number}'
@@ -49,9 +51,11 @@ definition:
 # Options Sentiment
 
 Measure options-market sentiment for one underlying symbol on a specific date.
-Returns the put/call volume ratio and its interpretation (below 0.7 = bullish, 0.7–1.0 =
-neutral, above 1.0 = bearish), call and put volume, the average bid/ask spread, and a
-liquidity grade. A data_quality block reports whether the sample is solid ("ok"), empty
+Returns the put/call volume ratio and its fixed convention label (below 0.7 bullish,
+0.7–1.0 neutral, above 1.0 bearish), call and put volume, the average bid/ask spread,
+and a liquidity grade.
+The thresholds are descriptive conventions, not calibrated forecasts for a symbol or
+market regime. A data_quality block reports whether the sample is solid ("ok"), empty
 ("no_data", e.g. a non-trading day), or too small to trust ("thin_sample"), so a reading
 is never mistaken for a confident one.
 The date is required and identifies which day to report.
