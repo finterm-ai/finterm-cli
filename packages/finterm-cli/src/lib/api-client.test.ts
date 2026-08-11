@@ -134,6 +134,60 @@ describe('response normalizers (live snake_case wire shape)', () => {
     expect(artifact?.sizeBytes).toBe(1024);
     expect(artifact?.expiresAt).toBe('2026-01-01T00:00:00.000Z');
   });
+
+  /**
+   * `bundle result` prints the run's `result` verbatim, so aliasing must not
+   * reach into it. Aliasing the whole payload recursively is the obvious way to
+   * fix the nested reads above and it silently doubles every key of the printed
+   * output — this pins the payload against that.
+   */
+  it('leaves the printed result payload exactly as the server sent it', async () => {
+    const result = {
+      financial_statements: {
+        statement_type: 'income_statement',
+        periods: [{ fiscal_year: 2024, total_revenue: 1 }],
+        miss_reason: null,
+      },
+    };
+    stubJson({
+      success: true,
+      data: {
+        run_id: 'run_1',
+        bundle_name: 'ticker_data',
+        descriptor_id: 'ticker_data@1',
+        status: 'succeeded',
+        normalized_request: { ticker: 'AAPL', delivery_mode: 'inline_result' },
+        result,
+      },
+    });
+
+    const response = await client().bundleResult('run_1');
+
+    expect(response.data?.result).toEqual(result);
+    // The read this client actually needs still resolves.
+    expect(response.data?.normalizedRequest.deliveryMode).toBe('inline_result');
+  });
+
+  it('does not rewrite caller-supplied parameter keys', async () => {
+    stubJson({
+      success: true,
+      data: {
+        run_id: 'run_1',
+        bundle_name: 'ticker_data',
+        descriptor_id: 'ticker_data@1',
+        status: 'succeeded',
+        normalized_request: {
+          ticker: 'AAPL',
+          delivery_mode: 'inline_result',
+          parameters: { verbose_statements: true },
+        },
+      },
+    });
+
+    const response = await client().bundleStatus('run_1');
+
+    expect(response.data?.normalizedRequest.parameters).toEqual({ verbose_statements: true });
+  });
 });
 
 describe('parseRetryAfterMs (rate-limit backoff honors the server)', () => {
