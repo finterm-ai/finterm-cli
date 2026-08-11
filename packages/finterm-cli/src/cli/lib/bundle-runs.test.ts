@@ -130,12 +130,52 @@ describe('downloadBundleRunArtifacts path safety guard', () => {
     });
   }
 
-  /**
-   * Built from the API's real snake_case payloads rather than the camelCase the
-   * client happens to read. The earlier fixtures were written camelCase, which
-   * meant the suite agreed with the reader instead of with the server and kept
-   * these mismatches invisible.
-   */
+  it('accepts a normal nested relative path and materializes it under the room', async () => {
+    const content = 'finterm-test-content\n';
+    const client = makeClient([manifestFile('reports/summary.md', content)]);
+
+    const fetcher = (): Promise<Response> =>
+      Promise.resolve(new Response(content, { status: 200 }));
+
+    const result = await downloadBundleRunArtifacts(client, RUN_ID, {
+      mode: 'merge',
+      room: roomPath,
+      fetcher,
+    });
+
+    expect(result.files).toHaveLength(1);
+    // The accepted path is returned in normalized POSIX form.
+    expect(result.files[0]?.path).toBe('reports/summary.md');
+    expect(result.downloadedCount).toBe(1);
+  });
+});
+
+/**
+ * Built from the API's real snake_case payloads rather than the camelCase the
+ * client happens to read. The earlier fixtures were written camelCase, which
+ * meant the suite agreed with the reader instead of with the server and kept
+ * these mismatches invisible.
+ */
+describe('getAgentRunStatus reads the live wire shape', () => {
+  let tempHome: string;
+  let previousConfig: string | undefined;
+
+  beforeEach(async () => {
+    tempHome = await mkdtemp(path.join(tmpdir(), 'finterm-ledger-'));
+    previousConfig = process.env.FINTERM_CONFIG;
+    process.env.FINTERM_CONFIG = tempHome;
+  });
+
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    if (previousConfig === undefined) {
+      delete process.env.FINTERM_CONFIG;
+    } else {
+      process.env.FINTERM_CONFIG = previousConfig;
+    }
+    await rm(tempHome, { recursive: true, force: true });
+  });
+
   it('derives artifact ids and next action from a live snake_case payload', async () => {
     const runId = 'run_live_shape';
     const wireRun = {
@@ -194,24 +234,50 @@ describe('downloadBundleRunArtifacts path safety guard', () => {
     // delivery_mode was invisible, so an unpublished manifest never became "wait".
     expect(status.syncManifest).toBe('not_ready');
     expect(status.nextAction).toBe('wait');
+    // The payload itself is untouched: no camelCase twins in what commands print.
+    expect(Object.keys(status.artifacts[0] ?? {})).toEqual([
+      'artifact_id',
+      'run_id',
+      'artifact_type',
+      'download_url',
+      'checksum_sha256',
+    ]);
   });
 
-  it('accepts a normal nested relative path and materializes it under the room', async () => {
-    const content = 'finterm-test-content\n';
-    const client = makeClient([manifestFile('reports/summary.md', content)]);
-
-    const fetcher = (): Promise<Response> =>
-      Promise.resolve(new Response(content, { status: 200 }));
-
-    const result = await downloadBundleRunArtifacts(client, RUN_ID, {
-      mode: 'merge',
-      room: roomPath,
-      fetcher,
+  it('survives a malformed artifact entry instead of throwing', async () => {
+    const runId = 'run_bad_entry';
+    const wireRun = {
+      run_id: runId,
+      bundle_name: 'test_bundle',
+      descriptor_id: 'descriptor_1',
+      lifecycle: 'runtime_http',
+      status: 'succeeded',
+      normalized_request: { ticker: 'TEST', delivery_mode: 'inline_result' },
+    };
+    const wireArtifacts = {
+      run_id: runId,
+      bundle_name: 'test_bundle',
+      descriptor_id: 'descriptor_1',
+      lifecycle: 'runtime_http',
+      status: 'succeeded',
+      artifacts: [null, 'not-an-object'],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: unknown) => {
+        const body = String(url).includes('/artifacts') ? wireArtifacts : wireRun;
+        return new Response(JSON.stringify({ success: true, data: body }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      })
+    );
+    const client = createAPIClient('https://api.example.invalid', 'fint_auth_test', {
+      cacheEnabled: false,
     });
 
-    expect(result.files).toHaveLength(1);
-    // The accepted path is returned in normalized POSIX form.
-    expect(result.files[0]?.path).toBe('reports/summary.md');
-    expect(result.downloadedCount).toBe(1);
+    const status = await getAgentRunStatus(client, runId);
+
+    expect(status.artifactIds).toEqual([]);
   });
 });

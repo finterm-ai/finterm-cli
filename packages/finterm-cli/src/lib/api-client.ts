@@ -444,36 +444,6 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Add a camelCase alias for each of this object's own snake_case keys.
- *
- * The API snake_cases every key while this client reads camelCase. Aliasing
- * rather than renaming keeps the original keys present, so anything reading the
- * raw payload (or a fixture already written camelCase) still works, and an
- * existing camelCase key always wins.
- *
- * Deliberately one level deep, applied only to the specific objects this client
- * reads fields out of. Recursing instead would rewrite the whole payload —
- * including a bundle run's `result`, which commands print verbatim — and give
- * every key in the printed output a duplicate camelCase twin.
- */
-function withCamelCaseAliases(value: unknown): Record<string, unknown> | undefined {
-  if (!isObjectRecord(value)) {
-    return undefined;
-  }
-  const result: Record<string, unknown> = { ...value };
-  for (const [key, entry] of Object.entries(value)) {
-    if (!key.includes('_')) {
-      continue;
-    }
-    const camelKey = key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
-    if (!(camelKey in result)) {
-      result[camelKey] = entry;
-    }
-  }
-  return result;
-}
-
-/**
  * Coerce a server usage payload into {@link BundleUsageSummaryData}, accepting both
  * camelCase and snake_case keys. Returns `undefined` when nothing usable is present so
  * callers can distinguish "no usage data" from an explicit null.
@@ -513,10 +483,6 @@ function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(v
     return value as T;
   }
   const links = isObjectRecord(value.links) ? value.links : undefined;
-  // `normalized_request` is read for delivery_mode, so it needs aliasing of its
-  // own keys — but not of `parameters`, whose keys are the caller's own.
-  const normalizedRequest =
-    withCamelCaseAliases(value.normalizedRequest ?? value.normalized_request) ?? {};
   return {
     ...value,
     runId: value.runId ?? value.run_id,
@@ -524,7 +490,7 @@ function normalizeBundleRunData<T extends BundleRunData | BundleRunResultData>(v
     descriptorId: value.descriptorId ?? value.descriptor_id,
     runtimeAdapter: value.runtimeAdapter ?? value.runtime_adapter,
     state: value.state ?? value.status,
-    normalizedRequest,
+    normalizedRequest: value.normalizedRequest ?? value.normalized_request ?? {},
     usageSummary: normalizeBundleUsageSummary(value.usageSummary ?? value.usage_summary),
     manifestReady: value.manifestReady ?? value.manifest_ready,
     links: links
@@ -543,15 +509,6 @@ function normalizeBundleArtifactsData(value: unknown): BundleArtifactsData {
   if (!isObjectRecord(value)) {
     return value as BundleArtifactsData;
   }
-  const rawArtifacts: unknown[] = Array.isArray(value.artifacts)
-    ? (value.artifacts as unknown[])
-    : [];
-  // Each entry is read for artifactId / downloadUrl / checksumSha256, and the
-  // entries are flat, so aliasing their own keys is all that is needed. A
-  // non-object entry is out of contract and passes through untouched.
-  const artifacts: unknown[] = rawArtifacts.map(
-    (artifact) => withCamelCaseAliases(artifact) ?? artifact
-  );
   return {
     ...value,
     runId: value.runId ?? value.run_id,
@@ -560,7 +517,7 @@ function normalizeBundleArtifactsData(value: unknown): BundleArtifactsData {
     runtimeAdapter: value.runtimeAdapter ?? value.runtime_adapter,
     state: value.state ?? value.status,
     manifestReady: value.manifestReady ?? value.manifest_ready,
-    artifacts,
+    artifacts: Array.isArray(value.artifacts) ? value.artifacts : [],
   } as unknown as BundleArtifactsData;
 }
 

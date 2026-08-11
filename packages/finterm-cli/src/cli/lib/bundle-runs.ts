@@ -313,6 +313,24 @@ function asStringRecord(value: unknown): Record<string, string> {
   return result;
 }
 
+/**
+ * Read a field the API may spell either way.
+ *
+ * Responses are snake_case at every depth while this code reads camelCase. The
+ * client's normalizers only reconcile top-level run keys, so anything nested —
+ * `normalized_request.delivery_mode`, and every per-artifact key — arrives in
+ * the server's spelling and a camelCase-only read silently yields undefined.
+ *
+ * Reconciled here rather than by rewriting the payload in the client: these
+ * objects are printed verbatim by `bundle artifacts`, `bundle status --json`,
+ * and friends, so adding aliases to them would give every field in that output
+ * a duplicate twin.
+ */
+function readEitherSpelling(record: Record<string, unknown>, camelKey: string): unknown {
+  const snakeKey = camelKey.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+  return record[camelKey] ?? record[snakeKey];
+}
+
 function getRunTicker(run: BundleRunData): string | undefined {
   const ticker = run.normalizedRequest.ticker;
   return typeof ticker === 'string' && ticker.length >= MIN_NON_EMPTY_LENGTH ? ticker : undefined;
@@ -324,7 +342,7 @@ function getRunTicker(run: BundleRunData): string | undefined {
  * publish one, so MANIFEST_NOT_READY must not make them wait forever.
  */
 function getRunDeliveryMode(run: BundleRunData): string | undefined {
-  return asString(run.normalizedRequest.deliveryMode);
+  return asString(readEitherSpelling(run.normalizedRequest, 'deliveryMode'));
 }
 
 /**
@@ -333,7 +351,13 @@ function getRunDeliveryMode(run: BundleRunData): string | undefined {
  */
 function hasDownloadableArtifact(artifacts: Record<string, unknown>[]): boolean {
   return artifacts.some((artifact) => {
-    const downloadUrl = asString(artifact.downloadUrl);
+    // A malformed entry is out of contract; skip it rather than throwing on a
+    // property read, which would fail the whole status command.
+    const record = asObject(artifact);
+    if (!record) {
+      return false;
+    }
+    const downloadUrl = asString(readEitherSpelling(record, 'downloadUrl'));
     return downloadUrl !== undefined && !downloadUrl.startsWith('file://');
   });
 }
@@ -586,7 +610,10 @@ export async function getAgentRunStatus(
   const fetched = await fetchArtifacts(client, run);
   const artifacts = fetched.artifacts;
   const artifactIds = artifacts
-    .map((artifact) => asString(artifact.artifactId))
+    .map((artifact) => {
+      const record = asObject(artifact);
+      return record ? asString(readEitherSpelling(record, 'artifactId')) : undefined;
+    })
     .filter((artifactId): artifactId is string => artifactId !== undefined);
 
   let nextAction = getNextAction(run.status, artifacts);
@@ -831,17 +858,23 @@ async function hashLocalFile(filePath: string): Promise<{ sha256: string; bytes:
   return { sha256: hash.digest('hex'), bytes };
 }
 
+/**
+ * These read the `--fixture-artifacts` file, which is the CLI's own camelCase
+ * shape — but a fixture is easiest to produce by saving a real `/artifacts`
+ * response, which is snake_case. Accepting both means such a fixture resolves
+ * instead of silently matching nothing.
+ */
 function getArtifactSourcePath(artifact: Record<string, unknown>): string | undefined {
   const explicitPath =
-    asString(artifact.localPath) ??
-    asString(artifact.sourcePath) ??
+    asString(readEitherSpelling(artifact, 'localPath')) ??
+    asString(readEitherSpelling(artifact, 'sourcePath')) ??
     asString(artifact.path) ??
-    asString(artifact.filePath);
+    asString(readEitherSpelling(artifact, 'filePath'));
   if (explicitPath) {
     return explicitPath;
   }
 
-  const downloadUrl = asString(artifact.downloadUrl);
+  const downloadUrl = asString(readEitherSpelling(artifact, 'downloadUrl'));
   if (downloadUrl?.startsWith('file://')) {
     return new URL(downloadUrl).pathname;
   }
@@ -852,7 +885,7 @@ function getArtifactSha256(artifact: Record<string, unknown>): string | undefine
   const checksum = asObject(artifact.checksum);
   return (
     asString(artifact.sha256) ??
-    asString(artifact.checksumSha256) ??
+    asString(readEitherSpelling(artifact, 'checksumSha256')) ??
     asString(checksum?.sha256) ??
     asString(checksum?.value)
   );

@@ -55,14 +55,16 @@ describe('bundleRun request body (contract guard)', () => {
 });
 
 /**
- * The API snake_cases every key, including nested objects and per-artifact
- * entries. The normalizers only rewrote top-level keys, so nested camelCase
- * reads silently found nothing and callers saw an empty artifact list and a
- * missing delivery mode rather than an error. Fixtures here use the real wire
- * shape for exactly that reason — the previous camelCase fixtures encoded the
- * bug and hid it.
+ * Nested payloads are passed through untouched: commands print them verbatim, so
+ * the client must not add key spellings the server did not send. Reconciling
+ * snake_case to camelCase happens where fields are read (see bundle-runs), not
+ * by rewriting responses.
+ *
+ * Fixtures use the real snake_case wire shape. Fixtures written camelCase agree
+ * with the reader rather than the server, which is what let the nested-read bugs
+ * survive.
  */
-describe('response normalizers (live snake_case wire shape)', () => {
+describe('response payloads (live snake_case wire shape)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -83,25 +85,17 @@ describe('response normalizers (live snake_case wire shape)', () => {
   const client = () =>
     createAPIClient('https://api.example.invalid', 'fint_auth_test', { cacheEnabled: false });
 
-  it('normalizes nested normalized_request keys, not just the top level', async () => {
-    stubJson({
-      success: true,
-      data: {
-        run_id: 'run_1',
-        bundle_name: 'ticker_data',
-        descriptor_id: 'ticker_data@1',
-        status: 'succeeded',
-        normalized_request: { ticker: 'AAPL', delivery_mode: 'dataroom_sync' },
-      },
-    });
-
-    const response = await client().bundleStatus('run_1');
-
-    expect(response.data?.runId).toBe('run_1');
-    expect(response.data?.normalizedRequest.deliveryMode).toBe('dataroom_sync');
-  });
-
-  it('normalizes each artifact entry, not just the envelope around them', async () => {
+  it('hands back artifact entries exactly as the server sent them', async () => {
+    const artifact = {
+      artifact_id: 'artifact_1',
+      run_id: 'run_1',
+      artifact_type: 'dataroom',
+      content_type: 'application/zip',
+      size_bytes: 1024,
+      checksum_sha256: 'abc123',
+      download_url: 'https://downloads.example.invalid/artifact_1',
+      expires_at: '2026-01-01T00:00:00.000Z',
+    };
     stubJson({
       success: true,
       data: {
@@ -110,36 +104,23 @@ describe('response normalizers (live snake_case wire shape)', () => {
         descriptor_id: 'ticker_data@1',
         status: 'succeeded',
         manifest_ready: true,
-        artifacts: [
-          {
-            artifact_id: 'artifact_1',
-            run_id: 'run_1',
-            artifact_type: 'dataroom',
-            content_type: 'application/zip',
-            size_bytes: 1024,
-            checksum_sha256: 'abc123',
-            download_url: 'https://downloads.example.invalid/artifact_1',
-            expires_at: '2026-01-01T00:00:00.000Z',
-          },
-        ],
+        artifacts: [artifact],
       },
     });
 
     const response = await client().bundleArtifacts('run_1');
-    const artifact = response.data?.artifacts[0];
 
-    expect(artifact?.artifactId).toBe('artifact_1');
-    expect(artifact?.downloadUrl).toBe('https://downloads.example.invalid/artifact_1');
-    expect(artifact?.checksumSha256).toBe('abc123');
-    expect(artifact?.sizeBytes).toBe(1024);
-    expect(artifact?.expiresAt).toBe('2026-01-01T00:00:00.000Z');
+    // `bundle artifacts` prints this array, and the artifacts are the substance
+    // of that command — adding camelCase aliases here would double every key of
+    // its output.
+    expect(response.data?.artifacts).toEqual([artifact]);
   });
 
   /**
-   * `bundle result` prints the run's `result` verbatim, so aliasing must not
-   * reach into it. Aliasing the whole payload recursively is the obvious way to
-   * fix the nested reads above and it silently doubles every key of the printed
-   * output — this pins the payload against that.
+   * `bundle result` prints the run's `result` verbatim. Reconciling spellings by
+   * rewriting the payload is the obvious fix for the nested reads this change is
+   * about, and it silently doubles every key of the printed output — so the
+   * reconciliation lives in the readers and these pin the payload.
    */
   it('leaves the printed result payload exactly as the server sent it', async () => {
     const result = {
@@ -164,8 +145,6 @@ describe('response normalizers (live snake_case wire shape)', () => {
     const response = await client().bundleResult('run_1');
 
     expect(response.data?.result).toEqual(result);
-    // The read this client actually needs still resolves.
-    expect(response.data?.normalizedRequest.deliveryMode).toBe('inline_result');
   });
 
   it('does not rewrite caller-supplied parameter keys', async () => {
