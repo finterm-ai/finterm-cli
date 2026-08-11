@@ -17,10 +17,10 @@ pnpm install --frozen-lockfile
 Run the full check suite and make sure it passes:
 
 ```bash
-pnpm ci
+pnpm run ci
 ```
 
-`pnpm ci` runs format, lint and typecheck, tests, build, `publint`, the packed-artifact
+`pnpm run ci` runs format, lint and typecheck, tests, build, `publint`, the packed-artifact
 smoke test, and `pnpm public:check` (which guards against unpublished surface leaking
 into the package).
 See [AGENTS.md](AGENTS.md) for the repository layout and the published
@@ -42,3 +42,7 @@ CI on a pushed `v*` tag; the same workflow creates the GitHub Release with the v
 Do not publish the package yourself; open a pull request instead.
 The full process — the one-time bootstrap and the ongoing automated flow — is in
 [docs/RELEASING.md](docs/RELEASING.md).
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
