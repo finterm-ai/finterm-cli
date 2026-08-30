@@ -3,8 +3,8 @@
  * Startup benchmark gate: spawn the shipped binary repeatedly and fail if the
  * p50 wall-clock time exceeds the threshold.
  *
- * Default threshold is 200ms (CI machines are slower than dev laptops; the
- * local target is 150ms). Override with BENCH_STARTUP_MAX_MS.
+ * The default threshold is 200ms, the local target; the root `ci` script overrides
+ * with BENCH_STARTUP_MAX_MS=600 to give shared CI runners headroom.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -30,6 +30,12 @@ function benchCommand(args: readonly string[]): { p50: number; min: number; max:
       console.error(`bench run failed (exit ${result.status}): ${result.stderr?.toString()}`);
       process.exit(1);
     }
+    // A binary that silently does nothing would post an excellent p50; the gate must
+    // only accept runs that produced output.
+    if (result.stdout.length === 0) {
+      console.error(`bench run produced no output for \`finterm ${args.join(' ')}\``);
+      process.exit(1);
+    }
     if (i >= WARMUP_RUNS) {
       times.push(elapsed);
     }
@@ -48,7 +54,12 @@ function main(): void {
     process.exit(1);
   }
 
-  const maxP50 = Number(process.env.BENCH_STARTUP_MAX_MS ?? DEFAULT_MAX_P50_MS);
+  const rawMax = process.env.BENCH_STARTUP_MAX_MS;
+  const maxP50 = rawMax === undefined ? DEFAULT_MAX_P50_MS : Number(rawMax);
+  if (!Number.isFinite(maxP50) || maxP50 <= 0) {
+    console.error(`BENCH_STARTUP_MAX_MS must be a positive number of milliseconds, got: ${rawMax}`);
+    process.exit(1);
+  }
 
   let failed = false;
   for (const args of [['--version'], ['--help']] as const) {

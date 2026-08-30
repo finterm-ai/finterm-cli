@@ -12,6 +12,12 @@ lockfile so the project `.npmrc` release-age gate stays effective:
 pnpm install --frozen-lockfile
 ```
 
+To run the CLI while developing, use `pnpm finterm <args>`: it runs the built bundle
+when it is newer than every bundled package’s source and falls back to in-process tsx
+when it is not, so it is fast and always current.
+`FINTERM_FORCE_TSX=1` pins the source path (details in
+`packages/finterm-cli/bin/launcher.mjs`).
+
 ## Before Opening a Pull Request
 
 Run the full check suite and make sure it passes:
