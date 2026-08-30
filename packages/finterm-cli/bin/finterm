@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+/**
+ * `finterm` dev entry point. The logic lives in `launcher.mjs`, a sibling module the
+ * tests import without starting a CLI; this file only starts it, so it behaves
+ * identically however it is reached — direct path, symlink, or `.bin` shim.
+ */
+
+import { startCli } from './launcher.mjs';
+
+startCli().catch((error) => {
+  const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
+  console.error(`finterm failed to start: ${detail}`);
+  console.error('A rebuild may fix a stale or partial bundle: pnpm build');
+  process.exitCode = 1;
+});
